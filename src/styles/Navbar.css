@@ -1,0 +1,45 @@
+body {
+  position: fixed;
+  top: 0px;
+  width: 100%;
+}
+
+.header {
+  height: 4rem; /* 64px */
+  border-bottom: 1px solid #ecedee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem; /* 24px */
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* 16px */
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* 8px */
+}
+
+.user-avatar {
+  border-radius: 50%;
+  border: 1px solid #ecedee;
+  width: 32px;
+  height: 32px;
+}
+
+.sign-out {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  text-decoration: none;
+  color: inherit;
+}
+
+.icon {
+  font-size: 16px;
+  line-height: 1;
+}
