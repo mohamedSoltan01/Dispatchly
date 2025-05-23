@@ -1,0 +1,267 @@
+.account-container {
+  padding: 24px;
+  background-color: var(--background-light);
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  width: 100%;
+  padding: 0 24px;
+}
+
+.account-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.edit-button {
+  text-transform: none;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.cancel-button,
+.save-button {
+  text-transform: none;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+/* Section Styles */
+.account-section {
+  width: 100%;
+  background-color: white;
+  border-radius: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-light);
+}
+
+.section-header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--background-light);
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.section-content {
+  padding: 32px;
+}
+
+/* Profile Section */
+.profile-section {
+  padding: 0;
+}
+
+.profile-content {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 40px 32px;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-name {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.profile-title {
+  font-size: 20px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Contact Information Section */
+.phones-section {
+  margin-top: 0;
+}
+
+.phones-title {
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.phones-grid {
+  margin-bottom: 16px;
+}
+
+.phone-input-group {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.phone-input-group .profile-field {
+  margin-bottom: 0;
+}
+
+.remove-phone-button {
+  position: absolute;
+  right: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--error);
+  padding: 4px;
+}
+
+.remove-phone-button:hover {
+  background-color: var(--error-light);
+}
+
+.add-phone-button {
+  text-transform: none;
+  color: var(--primary);
+  padding: 8px 0;
+  margin-top: 8px;
+}
+
+/* Form Fields */
+.profile-field {
+  margin-bottom: 20px;
+}
+
+.profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-field .MuiOutlinedInput-root {
+  background-color: var(--background-light);
+}
+
+.profile-field .MuiOutlinedInput-root.Mui-disabled {
+  background-color: var(--background-light);
+}
+
+.profile-field
+  .MuiOutlinedInput-root.Mui-disabled
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-light);
+}
+
+.profile-field .MuiInputLabel-root.Mui-disabled {
+  color: var(--text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .account-container {
+    padding: 16px;
+  }
+
+  .account-header {
+    padding: 0 16px;
+  }
+
+  .section-header {
+    padding: 20px 24px;
+  }
+
+  .section-content {
+    padding: 24px;
+  }
+
+  .account-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .action-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .profile-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .profile-info {
+    align-items: center;
+  }
+
+  .profile-name {
+    font-size: 24px;
+  }
+
+  .profile-title {
+    font-size: 18px;
+  }
+
+  .phone-input-group {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .remove-phone-button {
+    position: static;
+    transform: none;
+    margin-left: 8px;
+  }
+}
+
+/* Hover and focus states */
+.edit-button:hover,
+.cancel-button:hover,
+.save-button:hover {
+  opacity: 0.9;
+}
+
+.profile-field
+  .MuiOutlinedInput-root:not(.Mui-disabled):hover
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--primary);
+}
+
+.profile-field
+  .MuiOutlinedInput-root:not(.Mui-disabled).Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--primary);
+  border-width: 2px;
+}
+
+/* Avatar styles */
+.MuiAvatar-root {
+  border: 2px solid var(--border-light);
+  transition: transform 0.2s ease;
+}
+
+.MuiAvatar-root:hover {
+  transform: scale(1.05);
+}

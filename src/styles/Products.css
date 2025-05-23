@@ -1,0 +1,236 @@
+.products-container {
+  min-height: 100%;
+}
+
+.products-header {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.products-title {
+  font-family: var(--font-family);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.add-product-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 8px;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-product-button:hover {
+  background-color: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.add-product-button .MuiSvgIcon-root {
+  color: var(--success);
+}
+
+.filters-card {
+  margin-bottom: 24px;
+  padding: 24px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.search-field {
+  width: 100%;
+}
+
+.search-field .MuiInputBase-root {
+  background-color: var(--background-default);
+  border-radius: 8px;
+}
+
+.search-field .MuiInputBase-input {
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.search-field .MuiInputAdornment-root {
+  color: var(--text-secondary);
+}
+
+.filters-container {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+.filter-select {
+  min-width: 180px !important;
+  margin-right: 16px;
+}
+
+.filter-select .MuiOutlinedInput-root {
+  background-color: var(--background-default);
+  border-radius: 8px;
+}
+
+.filter-select .MuiSelect-select {
+  padding: 10px 16px;
+  font-size: 14px;
+  min-width: 180px !important;
+}
+
+/* Ensure the dropdown menu itself is also wider */
+.MuiPaper-root .MuiMenu-paper {
+  min-width: 180px !important;
+}
+
+.products-table-card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.products-table th {
+  background-color: var(--background-default);
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-main);
+}
+
+.products-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.products-table tr:hover {
+  background-color: var(--background-hover);
+}
+
+/* Remove status chip styles */
+.status-chip,
+.status-chip.reserved,
+.status-chip.not_reserved {
+  display: none;
+}
+
+.action-button {
+  padding: 4px;
+  color: var(--text-secondary);
+}
+
+.action-button:hover {
+  background-color: var(--background-hover);
+  color: var(--text-primary);
+}
+
+.action-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.action-menu-item.delete {
+  color: var(--error);
+}
+
+.action-menu-item:hover {
+  background-color: var(--background-hover);
+}
+
+/* Pagination styles */
+.pagination-container {
+  padding: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+.pagination-container .MuiTablePagination-root {
+  color: var(--text-secondary);
+}
+
+.pagination-container .MuiTablePagination-select {
+  font-size: 14px;
+}
+
+.pagination-container .MuiTablePagination-selectIcon {
+  color: var(--text-secondary);
+}
+
+/* Responsive styles */
+@media (max-width: 1024px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-container {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .filter-select {
+    min-width: calc(50% - 8px);
+  }
+}
+
+@media (max-width: 768px) {
+  .products-container {
+    padding: 16px;
+  }
+
+  .products-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .add-product-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-select {
+    min-width: 100%;
+  }
+
+  .products-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

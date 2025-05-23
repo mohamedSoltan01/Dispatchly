@@ -1,0 +1,360 @@
+.users-container {
+  padding: 24px;
+  background-color: #f9fafb;
+  min-height: 100vh;
+}
+
+.users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.add-user-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 8px;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: none;
+}
+
+.add-user-button:hover {
+  background-color: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.add-user-button .MuiSvgIcon-root {
+  color: var(--success);
+}
+
+.users-toolbar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-field {
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-field .MuiOutlinedInput-root {
+  background-color: white;
+}
+
+.filter-button {
+  border-color: #d1d5db;
+  color: #374151;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.users-table {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.users-table .MuiTableHead-root .MuiTableCell-root {
+  background-color: #f9fafb;
+  color: #374151;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.users-table .MuiTableBody-root .MuiTableCell-root {
+  color: #374151;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.user-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.role-chip {
+  font-size: 12px;
+  font-weight: 500;
+  height: 24px;
+}
+
+.role-chip.planning {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
+.role-chip.dispatch {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+.status-chip {
+  font-size: 12px;
+  font-weight: 500;
+  height: 24px;
+}
+
+.status-chip.active {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+.status-chip.inactive {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.user-menu .MuiMenuItem-root {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+.user-menu .delete-option {
+  color: #dc2626;
+}
+
+.filter-menu .MuiMenuItem-root {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+/* New User Form Styles */
+.user-container {
+  padding: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.new-user-card {
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.user-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 24px 0;
+}
+
+.add-new-user-form-group {
+  margin-bottom: 20px;
+}
+
+.user-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.user-input-field {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: var(--font-family);
+}
+
+.user-input-field:focus {
+  outline: none;
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.user-select-wrapper {
+  position: relative;
+}
+
+.user-select-field {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: var(--font-family);
+  background-color: white;
+  appearance: none;
+  cursor: pointer;
+}
+
+.user-select-field:focus {
+  outline: none;
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.user-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.new-user-button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.user-add-button {
+  background-color: var(--success);
+  color: white;
+}
+
+.user-add-button:hover {
+  background-color: var(--success-dark);
+}
+
+.user-cancel-link {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  padding: 10px 20px;
+  transition: color 0.2s ease;
+}
+
+.user-cancel-link:hover {
+  color: #374151;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  transition: color 0.2s ease;
+}
+
+.back-button:hover {
+  color: #374151;
+}
+
+.back-button .MuiSvgIcon-root {
+  font-size: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .users-container {
+    padding: 16px;
+  }
+
+  .users-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .users-toolbar {
+    flex-direction: column;
+  }
+
+  .search-field {
+    max-width: none;
+  }
+
+  .users-table {
+    overflow-x: auto;
+  }
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .user-input-field {
+  padding-right: 80px;
+}
+
+.password-toggle-button {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-family: var(--font-family);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.password-toggle-button:hover {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.user-input-field.error {
+  border-color: #dc2626;
+}
+
+.user-input-field.error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+}
+
+.error-message {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+  font-family: var(--font-family);
+}
+
+.new-user-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}

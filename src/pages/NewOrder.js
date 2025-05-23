@@ -1,15 +1,132 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "../styles/NewOrder.css";
 import FmdGoodOutlinedIcon from "@mui/icons-material/FmdGoodOutlined";
 import LaptopIcon from "@mui/icons-material/Laptop";
 import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
 import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { Typography, Button } from "@mui/material";
+import {
+  colors,
+  typography,
+  spacing,
+  shadows,
+  borderRadius,
+} from "../styles/designSystem";
+import { useNavigate } from "react-router-dom";
 
-export default function NewOrder() {
-  const [selectedType, setSelectedType] = useState(null); // 'inbound' or 'outbound'
-  const [selectedOption, setSelectedOption] = useState(null); // 'portal' or 'excel'
+export default function NewOrder({ selectedProducts, onClearProducts }) {
+  const navigate = useNavigate();
+  const [selectedType, setSelectedType] = useState(() => {
+    const saved = localStorage.getItem("newOrderType");
+    return saved || "";
+  });
+  const [selectedOption, setSelectedOption] = useState(() => {
+    const saved = localStorage.getItem("newOrderOption");
+    return saved || "";
+  });
+  const [showOrderForm, setShowOrderForm] = useState(() => {
+    const type = localStorage.getItem("newOrderType");
+    const option = localStorage.getItem("newOrderOption");
+    return Boolean(type && option === "portal");
+  });
+  const updateInProgress = useRef(false);
+
+  // Cleanup function to clear all saved state
+  const clearAllState = useCallback(() => {
+    const keysToRemove = [
+      "newOrderType",
+      "newOrderOption",
+      "orderWarehouse",
+      "orderDate",
+      "orderPickupTime",
+      "orderDestination",
+      "orderProducts",
+      "selectedProducts",
+    ];
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    onClearProducts();
+  }, [onClearProducts]);
+
+  // Handle type selection
+  const handleTypeSelect = useCallback((type) => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      setSelectedType(type);
+      localStorage.setItem("newOrderType", type);
+      setSelectedOption("");
+      localStorage.removeItem("newOrderOption");
+      setShowOrderForm(false);
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, []);
+
+  // Handle option selection
+  const handleOptionSelect = useCallback((option) => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      setSelectedOption(option);
+      localStorage.setItem("newOrderOption", option);
+      setShowOrderForm(true);
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, []);
+
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      if (showOrderForm) {
+        // If we're in the order form, go back to options
+        setShowOrderForm(false);
+        setSelectedOption("");
+        localStorage.removeItem("newOrderOption");
+      } else if (selectedType) {
+        // If we're in options, go back to type selection
+        setSelectedType("");
+        localStorage.removeItem("newOrderType");
+      }
+      onClearProducts();
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, [showOrderForm, selectedType, onClearProducts]);
+
+  // Handle successful order submission
+  const handleOrderSuccess = useCallback(() => {
+    clearAllState();
+  }, [clearAllState]);
+
+  // Handle selectedProducts changes
+  useEffect(() => {
+    if (selectedProducts && selectedProducts.length > 0 && showOrderForm) {
+      const existingProducts = JSON.parse(
+        localStorage.getItem("orderProducts") || "[]"
+      );
+      const existingIds = new Set(existingProducts.map((p) => p.id));
+
+      const newProducts = selectedProducts
+        .filter((p) => !existingIds.has(p.id))
+        .map((p) => ({
+          ...p,
+          quantity: 1,
+        }));
+
+      if (newProducts.length > 0) {
+        const updatedProducts = [...existingProducts, ...newProducts];
+        localStorage.setItem("orderProducts", JSON.stringify(updatedProducts));
+      }
+    }
+  }, [selectedProducts, showOrderForm]);
 
   const portalInstructions = [
     "Add items through portal",
@@ -25,31 +142,21 @@ export default function NewOrder() {
     "- Upload the file",
   ];
 
-  const handleCardClick = (type) => {
-    setSelectedType(type);
-    setSelectedOption(null);
-  };
-
-  const handleBack = () => {
-    if (selectedOption) {
-      setSelectedOption(null);
-    } else {
-      setSelectedType(null);
-    }
-  };
-
-  const handleOptionClick = (option) => {
-    setSelectedOption(option);
-  };
-
-  if (selectedOption === "portal") {
+  if (selectedOption === "portal" || showOrderForm) {
     return (
       <div className="container">
         <button className="back-button" onClick={handleBack}>
           <ArrowBackIcon />
           Back to Options
         </button>
-        <OrderForm type={selectedType} />
+        <OrderForm
+          type={selectedType}
+          selectedProducts={selectedProducts}
+          onTypeChange={handleTypeSelect}
+          onOptionChange={handleOptionSelect}
+          onClearProducts={onClearProducts}
+          onOrderSuccess={handleOrderSuccess}
+        />
       </div>
     );
   }
@@ -84,7 +191,7 @@ export default function NewOrder() {
               note="Recommended"
               buttonText="Portal"
               icon="laptop"
-              onClick={() => handleOptionClick("portal")}
+              onClick={() => handleOptionSelect("portal")}
             />
             <OptionCard
               title="Excel Sheets"
@@ -92,7 +199,7 @@ export default function NewOrder() {
               note="If more than 10 items"
               buttonText="Excel Sheets"
               icon="excel"
-              onClick={() => handleOptionClick("excel")}
+              onClick={() => handleOptionSelect("excel")}
             />
           </div>
         </main>
@@ -105,13 +212,13 @@ export default function NewOrder() {
       <main className="main-content">
         <div className="card-grid">
           <div
-            onClick={() => handleCardClick("outbound")}
+            onClick={() => handleTypeSelect("outbound")}
             style={{ cursor: "pointer" }}
           >
             <OutboundCard />
           </div>
           <div
-            onClick={() => handleCardClick("inbound")}
+            onClick={() => handleTypeSelect("inbound")}
             style={{ cursor: "pointer" }}
           >
             <InboundCard />
@@ -343,64 +450,355 @@ function ProductCard({ product, index, onQuantityChange, onRemove }) {
   );
 }
 
-function OrderForm({ type }) {
+function OrderForm({
+  type,
+  selectedProducts,
+  onTypeChange,
+  onOptionChange,
+  onClearProducts,
+  onOrderSuccess,
+}) {
+  const navigate = useNavigate();
   const [orderId] = useState("FB0204819");
-  const [warehouse, setWarehouse] = useState("");
-  const [date, setDate] = useState("");
-  const [pickupTime, setPickupTime] = useState("");
-  const [destination, setDestination] = useState("");
-  const [products, setProducts] = useState([]);
-  const [showNewProductCard, setShowNewProductCard] = useState(false);
+  const [warehouse, setWarehouse] = useState(() => {
+    const saved = localStorage.getItem("orderWarehouse");
+    return saved || "";
+  });
+  const [date, setDate] = useState(() => {
+    const saved = localStorage.getItem("orderDate");
+    if (saved) return saved;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log({
-      orderId,
-      type,
-      warehouse,
-      date,
-      pickupTime,
-      destination,
-      products,
-    });
-  };
+    // Direct date initialization
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
+  const [pickupTime, setPickupTime] = useState(() => {
+    const saved = localStorage.getItem("orderPickupTime");
+    return saved || "";
+  });
+  const [destination, setDestination] = useState(() => {
+    const saved = localStorage.getItem("orderDestination");
+    return saved || "";
+  });
+  const [products, setProducts] = useState(() => {
+    try {
+      const saved = localStorage.getItem("orderProducts");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Error parsing saved products:", e);
+      return [];
+    }
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [errors, setErrors] = useState({});
+  const updateInProgress = useRef(false);
 
-  const handleAddProductClick = () => {
-    setShowNewProductCard(true);
-  };
+  // Handle selectedProducts changes
+  useEffect(() => {
+    if (!selectedProducts?.length || updateInProgress.current) return;
 
-  const handleProductAdded = (newProduct) => {
-    setProducts([...products, { ...newProduct, quantity: 1 }]);
-    setShowNewProductCard(false);
-  };
+    updateInProgress.current = true;
+    try {
+      // Get current products from localStorage
+      const currentProducts = JSON.parse(
+        localStorage.getItem("orderProducts") || "[]"
+      );
+      const currentIds = new Set(currentProducts.map((p) => p.id));
 
-  const handleQuantityChange = (index, newQuantity) => {
-    const updatedProducts = [...products];
-    updatedProducts[index] = {
-      ...updatedProducts[index],
-      quantity: parseInt(newQuantity) || 0,
-    };
-    setProducts(updatedProducts);
-  };
+      // Filter out products that are already in the list
+      const newProducts = selectedProducts
+        .filter((p) => !currentIds.has(p.id))
+        .map((p) => ({
+          ...p,
+          quantity: 1,
+        }));
 
-  const handleRemoveProduct = (index) => {
-    setProducts(products.filter((_, i) => i !== index));
-  };
+      if (newProducts.length > 0) {
+        // Combine existing and new products
+        const updatedProducts = [...currentProducts, ...newProducts];
 
-  if (showNewProductCard) {
+        // Update both state and localStorage
+        setProducts(updatedProducts);
+        localStorage.setItem("orderProducts", JSON.stringify(updatedProducts));
+      }
+
+      // Clear selected products after adding them to the order
+      onClearProducts();
+    } catch (error) {
+      console.error("Error updating products:", error);
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, [selectedProducts, onClearProducts]);
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleWarehouseChange = useCallback((e) => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      const value = e.target.value;
+      setWarehouse(value);
+      if (value) {
+        localStorage.setItem("orderWarehouse", value);
+      } else {
+        localStorage.removeItem("orderWarehouse");
+      }
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, []);
+
+  const handleDateChange = useCallback((e) => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      const value = e.target.value;
+      setDate(value);
+      if (value) {
+        localStorage.setItem("orderDate", value);
+      } else {
+        localStorage.removeItem("orderDate");
+      }
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, []);
+
+  const handlePickupTimeChange = useCallback((e) => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      const value = e.target.value;
+      setPickupTime(value);
+      if (value) {
+        localStorage.setItem("orderPickupTime", value);
+      } else {
+        localStorage.removeItem("orderPickupTime");
+      }
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, []);
+
+  const handleDestinationChange = useCallback((e) => {
+    if (updateInProgress.current) return;
+
+    updateInProgress.current = true;
+    try {
+      const value = e.target.value;
+      setDestination(value);
+      if (value) {
+        localStorage.setItem("orderDestination", value);
+      } else {
+        localStorage.removeItem("orderDestination");
+      }
+    } finally {
+      updateInProgress.current = false;
+    }
+  }, []);
+
+  const handleQuantityChange = useCallback(
+    (productId, newQuantity) => {
+      if (updateInProgress.current) return;
+
+      updateInProgress.current = true;
+      try {
+        const updatedProducts = products.map((product) =>
+          product.id === productId
+            ? { ...product, quantity: Math.max(1, parseInt(newQuantity) || 1) }
+            : product
+        );
+
+        setProducts(updatedProducts);
+        localStorage.setItem("orderProducts", JSON.stringify(updatedProducts));
+      } finally {
+        updateInProgress.current = false;
+      }
+    },
+    [products]
+  );
+
+  const handleRemoveProduct = useCallback(
+    (productId) => {
+      if (updateInProgress.current) return;
+
+      updateInProgress.current = true;
+      try {
+        const updatedProducts = products.filter(
+          (product) => product.id !== productId
+        );
+        setProducts(updatedProducts);
+        localStorage.setItem("orderProducts", JSON.stringify(updatedProducts));
+      } finally {
+        updateInProgress.current = false;
+      }
+    },
+    [products]
+  );
+
+  // Handle form submission
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (updateInProgress.current) return;
+
+      updateInProgress.current = true;
+      try {
+        const newErrors = {};
+        if (!warehouse) newErrors.warehouse = "Warehouse is required";
+        if (!date) newErrors.date = "Date is required";
+        if (!pickupTime) newErrors.pickupTime = "Pickup time is required";
+        if (!destination) newErrors.destination = "Destination is required";
+        if (products.length === 0) {
+          newErrors.products = "At least one product is required";
+        }
+
+        // Direct date comparison
+        if (date) {
+          const today = new Date();
+          const selectedDate = new Date(date);
+          today.setHours(0, 0, 0, 0);
+          selectedDate.setHours(0, 0, 0, 0);
+          if (selectedDate < today) {
+            newErrors.date = "Cannot select a past date";
+          }
+        }
+
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) {
+          return;
+        }
+
+        setIsSubmitting(true);
+
+        // Create order details object
+        const orderDetails = {
+          orderId,
+          type,
+          warehouse,
+          date,
+          pickupTime,
+          destination,
+          products: products.map((product) => ({
+            skuName: product.skuName,
+            quantity: product.quantity,
+            productId: product.id,
+            dimensions: product.dimensions,
+            weight: product.weight,
+            temperature: product.temperature,
+            boxType: product.boxType,
+            location: product.currentLocation,
+            category: product.category,
+          })),
+        };
+
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Show thank you message
+        setShowThankYou(true);
+
+        // Clear form data but don't navigate
+        onOrderSuccess();
+      } catch (error) {
+        console.error("Error submitting order:", error);
+        setErrors({ submit: "Failed to submit order. Please try again." });
+      } finally {
+        setIsSubmitting(false);
+        updateInProgress.current = false;
+      }
+    },
+    [products, warehouse, date, pickupTime, destination, type, onOrderSuccess]
+  );
+
+  if (showThankYou) {
     return (
       <div className="order-form-container">
-        <button
-          className="back-button"
-          onClick={() => setShowNewProductCard(false)}
+        <div
+          className="thank-you-screen"
+          style={{
+            textAlign: "center",
+            padding: "48px 24px",
+            backgroundColor: colors.background.paper,
+            borderRadius: borderRadius.lg,
+            boxShadow: shadows.md,
+          }}
         >
-          <ArrowBackIcon />
-          Back to Order Form
-        </button>
-        <NewProductCard
-          onCancel={() => setShowNewProductCard(false)}
-          onProductAdded={handleProductAdded}
-        />
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              backgroundColor: `${colors.success}15`,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+            }}
+          >
+            <CheckCircleIcon
+              style={{
+                fontSize: 32,
+                color: colors.success,
+              }}
+            />
+          </div>
+          <Typography
+            variant="h4"
+            sx={{
+              ...typography.h3,
+              marginBottom: spacing.md,
+              color: colors.text.primary,
+            }}
+          >
+            Order Created Successfully!
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              ...typography.body1,
+              color: colors.text.secondary,
+              marginBottom: spacing.xl,
+              maxWidth: "400px",
+              margin: "0 auto 32px",
+            }}
+          >
+            Your order has been created and is being processed. You can track
+            its status in the Orders section.
+          </Typography>
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.md,
+              justifyContent: "center",
+            }}
+          >
+            <button
+              onClick={() => navigate("/dashboard")}
+              style={{
+                padding: "12px 24px",
+                backgroundColor: colors.background.paper,
+                color: colors.text.primary,
+                border: `1px solid ${colors.border.main}`,
+                borderRadius: borderRadius.md,
+                cursor: "pointer",
+                ...typography.button,
+                "&:hover": {
+                  backgroundColor: colors.background.default,
+                },
+              }}
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -411,21 +809,29 @@ function OrderForm({ type }) {
         <div className="form-grid">
           <div className="form-group">
             <label>Order ID</label>
-            <input type="text" value={orderId} className="form-input" />
+            <input
+              type="text"
+              value={orderId}
+              className="form-input"
+              disabled
+            />
           </div>
 
           <div className="form-group">
-            <label>warehouse</label>
+            <label>Warehouse</label>
             <div className="select-wrapper">
               <select
-                className="form-input"
+                className={`form-input ${errors.warehouse ? "error" : ""}`}
                 value={warehouse}
-                onChange={(e) => setWarehouse(e.target.value)}
+                onChange={handleWarehouseChange}
               >
                 <option value="">Select warehouse</option>
                 <option value="warehouse1">Warehouse 1</option>
                 <option value="warehouse2">Warehouse 2</option>
               </select>
+              {errors.warehouse && (
+                <span className="error-message">{errors.warehouse}</span>
+              )}
             </div>
           </div>
 
@@ -435,65 +841,214 @@ function OrderForm({ type }) {
               <input
                 type="date"
                 placeholder="Select date"
-                className="form-input"
+                className={`form-input ${errors.date ? "error" : ""}`}
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                min={(() => {
+                  const today = new Date();
+                  const year = today.getFullYear();
+                  const month = String(today.getMonth() + 1).padStart(2, "0");
+                  const day = String(today.getDate()).padStart(2, "0");
+                  return `${year}-${month}-${day}`;
+                })()}
+                onChange={handleDateChange}
               />
+              {errors.date && (
+                <span className="error-message">{errors.date}</span>
+              )}
             </div>
           </div>
 
           <div className="form-group">
             <label>Pickup Time</label>
             <input
-              type="text"
+              type="time"
               placeholder="Enter pickup time"
-              className="form-input"
+              className={`form-input ${errors.pickupTime ? "error" : ""}`}
               value={pickupTime}
-              onChange={(e) => setPickupTime(e.target.value)}
+              onChange={handlePickupTimeChange}
             />
+            {errors.pickupTime && (
+              <span className="error-message">{errors.pickupTime}</span>
+            )}
           </div>
 
           <div className="form-group full-width">
-            <label>Distination</label>
+            <label>Destination</label>
             <input
               type="text"
               placeholder="Enter destination"
-              className="form-input"
+              className={`form-input ${errors.destination ? "error" : ""}`}
               value={destination}
-              onChange={(e) => setDestination(e.target.value)}
+              onChange={handleDestinationChange}
             />
+            {errors.destination && (
+              <span className="error-message">{errors.destination}</span>
+            )}
           </div>
         </div>
 
         <div className="divider">
-          <button
-            type="button"
+          <Button
+            variant="outlined"
+            color="success"
+            onClick={() => {
+              // Save current form state before navigating
+              const formState = {
+                warehouse,
+                date,
+                pickupTime,
+                destination,
+                products,
+              };
+
+              // Save all form state at once
+              Object.entries(formState).forEach(([key, value]) => {
+                if (key === "products") {
+                  localStorage.setItem("orderProducts", JSON.stringify(value));
+                } else {
+                  localStorage.setItem(
+                    `order${key.charAt(0).toUpperCase() + key.slice(1)}`,
+                    value
+                  );
+                }
+              });
+
+              // Clear any existing selected products before navigating
+              onClearProducts();
+
+              // Navigate to products page in selection mode
+              navigate("/products?mode=select");
+            }}
             className="add-product-button"
-            onClick={handleAddProductClick}
           >
-            ADD PRODUCT
-          </button>
+            {products.length > 0 ? "Add More Products" : "Select Products"}
+          </Button>
+          {errors.products && (
+            <span
+              className="error-message"
+              style={{ display: "block", marginTop: "8px" }}
+            >
+              {errors.products}
+            </span>
+          )}
         </div>
 
-        {/* Display added products */}
         <div className="product-cards-container">
-          {products.map((product, index) => (
-            <ProductCard
-              key={index}
-              product={product}
-              index={index}
-              onQuantityChange={handleQuantityChange}
-              onRemove={handleRemoveProduct}
-            />
+          {products.map((product) => (
+            <div key={product.id} className="product-card">
+              <div className="product-card-header">
+                <h3>{product.skuName || product.name}</h3>
+                <button
+                  type="button"
+                  className="remove-product-button"
+                  onClick={() => handleRemoveProduct(product.id)}
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="product-details">
+                <div className="product-info">
+                  <p>
+                    <strong>Product ID:</strong> {product.id}
+                  </p>
+                  <p>
+                    <strong>Dimensions:</strong>{" "}
+                    {product.dimensions ||
+                      `${product.length}x${product.width}x${product.height}`}
+                  </p>
+                  <p>
+                    <strong>Weight:</strong> {product.weight} kg
+                  </p>
+                  {product.temperature && (
+                    <p>
+                      <strong>Temperature:</strong> {product.temperature}
+                    </p>
+                  )}
+                  <p>
+                    <strong>Box Type:</strong> {product.boxType}
+                  </p>
+                  <p>
+                    <strong>Location:</strong>{" "}
+                    {product.currentLocation || product.location}
+                  </p>
+                  <p>
+                    <strong>Category:</strong> {product.category}
+                  </p>
+                </div>
+                <div className="product-quantity">
+                  <label htmlFor={`quantity-${product.id}`}>Quantity:</label>
+                  <input
+                    id={`quantity-${product.id}`}
+                    type="number"
+                    min="1"
+                    value={product.quantity}
+                    onChange={(e) =>
+                      handleQuantityChange(product.id, e.target.value)
+                    }
+                    className="quantity-input"
+                  />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
+        {errors.submit && (
+          <div
+            className="error-message"
+            style={{
+              textAlign: "center",
+              marginBottom: spacing.md,
+              color: colors.error,
+            }}
+          >
+            {errors.submit}
+          </div>
+        )}
+
         <div className="form-actions">
-          <button type="submit" className="create-order-button">
-            Create Order
+          <button
+            type="submit"
+            className="create-order-button"
+            disabled={isSubmitting}
+            style={{
+              opacity: isSubmitting ? 0.7 : 1,
+              cursor: isSubmitting ? "not-allowed" : "pointer",
+              position: "relative",
+            }}
+          >
+            {isSubmitting ? (
+              <>
+                <span style={{ visibility: "hidden" }}>Create Order</span>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: 20,
+                    height: 20,
+                    border: `2px solid ${colors.text.white}`,
+                    borderTopColor: "transparent",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                  }}
+                />
+              </>
+            ) : (
+              "Create Order"
+            )}
           </button>
         </div>
       </form>
+
+      <style jsx>{`
+        @keyframes spin {
+          to {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -605,256 +1160,6 @@ function ExcelUpload({ onFileChange, onSubmit }) {
           Submit
         </button>
       </div>
-    </div>
-  );
-}
-
-function NewProductCard({ onCancel, onProductAdded }) {
-  const [formData, setFormData] = useState({
-    sku: "",
-    length: "",
-    width: "",
-    height: "",
-    weight: "",
-    minMaxTemp: false,
-    minTemp: "",
-    maxTemp: "",
-    boxType: "",
-    location: "",
-    category: "",
-  });
-
-  const handleInputChange = (e) => {
-    const { id, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleDimensionChange = (e) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("New product form submitted:", formData);
-    onProductAdded(formData);
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      sku: "",
-      length: "",
-      width: "",
-      height: "",
-      weight: "",
-      minMaxTemp: false,
-      minTemp: "",
-      maxTemp: "",
-      boxType: "",
-      location: "",
-      category: "",
-    });
-    onCancel();
-  };
-
-  return (
-    <div className="product-container">
-      <form className="new-product-card" onSubmit={handleSubmit}>
-        <h1 className="product-title">Add new product</h1>
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="sku" className="product-label">
-            SKU Name
-          </label>
-          <input
-            id="sku"
-            className="product-input-field"
-            value={formData.sku}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-
-        <div className="add-new-product-form-group">
-          <label className="product-label">Dimensions</label>
-          <div className="product-dimensions-container">
-            <input
-              id="length"
-              type="number"
-              className="product-dimension-box"
-              placeholder="LENGTH"
-              value={formData.length}
-              onChange={handleDimensionChange}
-              required
-            />
-            <span className="product-dimension-separator">X</span>
-            <input
-              id="width"
-              type="number"
-              className="product-dimension-box"
-              placeholder="WIDTH"
-              value={formData.width}
-              onChange={handleDimensionChange}
-              required
-            />
-            <span className="product-dimension-separator">X</span>
-            <input
-              id="height"
-              type="number"
-              className="product-dimension-box"
-              placeholder="HEIGHT"
-              value={formData.height}
-              onChange={handleDimensionChange}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="weight" className="product-label">
-            Weight
-          </label>
-          <input
-            id="weight"
-            type="number"
-            className="product-input-field"
-            value={formData.weight}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-
-        <div className="add-new-product-form-group">
-          <div className="product-checkbox-container">
-            <input
-              type="checkbox"
-              id="minMaxTemp"
-              checked={formData.minMaxTemp}
-              onChange={handleInputChange}
-              className="product-checkbox"
-            />
-            <label htmlFor="minMaxTemp" className="product-checkbox-label">
-              MIN/MAX Temp.
-            </label>
-          </div>
-        </div>
-
-        {formData.minMaxTemp && (
-          <div className="product-temp-range">
-            <div className="add-new-product-form-group">
-              <label className="product-label">FROM</label>
-              <input
-                id="minTemp"
-                type="number"
-                className="product-input-field product-temp-input"
-                value={formData.minTemp}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="add-new-product-form-group">
-              <label className="product-label">TO</label>
-              <input
-                id="maxTemp"
-                type="number"
-                className="product-input-field product-temp-input"
-                value={formData.maxTemp}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="boxType" className="product-label">
-            Box Type
-          </label>
-          <div className="product-select-wrapper">
-            <select
-              id="boxType"
-              className="product-select-field"
-              value={formData.boxType}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select box type
-              </option>
-              <option value="standard">Standard</option>
-              <option value="custom">Custom</option>
-              <option value="special">Special</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="location" className="product-label">
-            Current Location
-          </label>
-          <div className="product-select-wrapper">
-            <select
-              id="location"
-              className="product-select-field"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select location
-              </option>
-              <option value="warehouse1">Warehouse 1</option>
-              <option value="warehouse2">Warehouse 2</option>
-              <option value="store">Store</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="category" className="product-label">
-            Category
-          </label>
-          <div className="product-select-wrapper">
-            <select
-              id="category"
-              className="product-select-field"
-              value={formData.category}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select category
-              </option>
-              <option value="electronics">Electronics</option>
-              <option value="clothing">Clothing</option>
-              <option value="food">Food</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="product-actions">
-          <button
-            type="submit"
-            className="new-product-button product-add-button"
-          >
-            Add Product
-          </button>
-          <button
-            type="button"
-            className="product-cancel-link"
-            onClick={handleCancel}
-          >
-            cancel
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

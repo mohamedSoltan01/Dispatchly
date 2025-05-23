@@ -1,0 +1,409 @@
+.cars-container {
+  padding: 24px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cars-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.cars-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.add-car-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: transparent;
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 8px;
+  font-family: var(--font-family);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: none !important;
+}
+
+.add-car-button:hover {
+  background-color: var(--success-light);
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.add-car-button .MuiSvgIcon-root {
+  color: var(--success);
+}
+
+.filters-card {
+  margin-bottom: 24px;
+  padding: 16px;
+}
+
+.filters-grid {
+  display: flex;
+  align-items: center;
+}
+
+.search-field {
+  width: 100%;
+}
+
+.filters-container {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  min-width: 150px;
+}
+
+.cars-table-card {
+  overflow: hidden;
+}
+
+.cars-table {
+  min-width: 100%;
+}
+
+.cars-table th {
+  font-weight: 600;
+  background-color: #f5f5f5;
+}
+
+.action-button {
+  padding: 4px;
+}
+
+.action-menu {
+  margin-top: 8px;
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.action-menu-item.delete {
+  color: #d32f2f;
+}
+
+.pagination-container {
+  padding: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Car Form Styles */
+.car-container {
+  width: 100%;
+  min-height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  background-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  position: relative;
+  z-index: 1;
+}
+
+.new-car-card {
+  width: 100%;
+  max-width: 800px;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 40px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.car-title {
+  color: #034808;
+  font-size: 32px;
+  font-weight: 600;
+  margin-bottom: 40px;
+  text-align: center;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f2f2f2;
+}
+
+.add-new-car-form-group {
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.car-label {
+  display: block;
+  color: #333333;
+  font-weight: 500;
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.car-input-field {
+  width: 100%;
+  height: 56px;
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.car-input-field:hover {
+  border-color: #59caa1;
+}
+
+.car-input-field:focus {
+  outline: none;
+  border-color: #59caa1;
+  box-shadow: 0 0 0 3px rgba(89, 202, 161, 0.1);
+}
+
+.car-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.car-select-field {
+  width: 100%;
+  height: 56px;
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 16px;
+  appearance: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.car-select-field:hover {
+  border-color: #59caa1;
+}
+
+.car-select-field:focus {
+  outline: none;
+  border-color: #59caa1;
+  box-shadow: 0 0 0 3px rgba(89, 202, 161, 0.1);
+}
+
+.car-select-wrapper::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #666666;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.car-select-wrapper:hover::after {
+  border-top-color: #59caa1;
+}
+
+.car-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #f2f2f2;
+}
+
+.new-car-button {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 9999px;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.car-add-button {
+  background-color: #59caa1;
+  color: #ffffff;
+  width: 256px;
+  height: 56px;
+  box-shadow: 0 2px 8px rgba(89, 202, 161, 0.2);
+}
+
+.car-add-button:hover {
+  background-color: #4bb592;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(89, 202, 161, 0.3);
+}
+
+.car-add-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(89, 202, 161, 0.2);
+}
+
+.car-cancel-link {
+  color: #666666;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.car-cancel-link:hover {
+  color: #333333;
+  background-color: #f2f2f2;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #666666;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.back-button:hover {
+  color: #333333;
+  background-color: #f2f2f2;
+}
+
+.back-button svg {
+  font-size: 20px;
+}
+
+/* Responsive Design for Car Form */
+@media (max-width: 768px) {
+  .car-container {
+    padding: 20px 16px;
+  }
+
+  .new-car-card {
+    padding: 24px 20px;
+  }
+
+  .car-title {
+    font-size: 28px;
+    margin-bottom: 32px;
+  }
+
+  .car-add-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .car-container {
+    padding: 16px 12px;
+  }
+
+  .new-car-card {
+    padding: 20px 16px;
+  }
+
+  .car-title {
+    font-size: 24px;
+    margin-bottom: 24px;
+  }
+}
+
+/* Status Chip Styles */
+.status-chip {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-family);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background-color: var(--success-light);
+  color: var(--success);
+  border: 1px solid rgba(46, 125, 50, 0.2);
+}
+
+.status-maintenance {
+  background-color: var(--warning-light);
+  color: var(--warning);
+  border: 1px solid rgba(237, 108, 2, 0.2);
+}
+
+.status-inactive {
+  background-color: var(--error-light);
+  color: var(--error);
+  border: 1px solid rgba(211, 47, 47, 0.2);
+}
+
+/* Error Message Styles */
+.error-message {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.car-input-field.error {
+  border-color: #d32f2f;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cars-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .filters-container {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+
+  .cars-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

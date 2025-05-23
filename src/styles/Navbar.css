@@ -5,18 +5,26 @@ body {
 }
 
 .header {
-  height: 4rem; /* 64px */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   border-bottom: 1px solid #ecedee;
+  padding: 0 1.5rem; /* 24px */
+}
+
+.header-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 1.5rem; /* 24px */
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 1rem; /* 16px */
 }
 
 .user-info {
@@ -42,4 +50,39 @@ body {
 .icon {
   font-size: 16px;
   line-height: 1;
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .header {
+    padding: 0 16px;
+  }
+}
+
+/* Menu styles */
+.MuiMenu-paper {
+  border-radius: 8px !important;
+}
+
+.MuiMenuItem-root {
+  padding: 8px 16px !important;
+  min-height: 40px !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Avatar styles */
+.MuiAvatar-root {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+/* Badge styles */
+.MuiBadge-badge {
+  font-size: 10px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  padding: 0 4px !important;
 }

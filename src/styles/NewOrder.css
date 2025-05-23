@@ -426,100 +426,100 @@ label {
 /* Product Cards Grid Container */
 .product-cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: var(--spacing-xl);
-  margin-bottom: var(--spacing-2xl);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
 }
 
 .product-card {
-  background-color: var(--color-background-alt);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  margin-bottom: 0;
-  position: relative;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px;
   transition: box-shadow 0.2s ease;
 }
 
 .product-card:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.product-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.product-card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
 }
 
 .remove-product-button {
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
-  background-color: #fee2e2;
-  color: #dc2626;
+  background: none;
   border: none;
-  border-radius: var(--radius-full);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  color: #dc3545;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
 }
 
 .remove-product-button:hover {
-  background-color: #fecaca;
-  transform: translateY(-1px);
-}
-
-.remove-product-button:active {
-  transform: translateY(0);
-}
-
-.remove-product-button::before {
-  content: "×";
-  font-size: 16px;
-  font-weight: bold;
-  line-height: 1;
+  background-color: rgba(220, 53, 69, 0.1);
 }
 
 .product-details {
-  padding-right: var(--spacing-xl);
-  margin-top: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.product-card h3 {
-  padding-right: var(--spacing-xl);
-  margin-bottom: var(--spacing-lg);
+.product-info {
+  display: grid;
+  gap: 8px;
 }
 
-.product-form-group {
-  margin-bottom: var(--spacing-md);
+.product-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
 }
 
-.product-form-group label {
-  display: block;
-  text-align: center;
-  font-size: var(--font-size-xs);
-  margin-bottom: var(--spacing-sm);
+.product-info strong {
+  color: #333;
 }
 
-.product-input {
-  width: 100%;
-  height: 32px;
-  padding: 0 var(--spacing-sm);
-  background-color: var(--color-background);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
+.product-quantity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
 }
 
-.add-button {
-  width: 100%;
-  height: 40px;
-  background-color: #e0e5f2;
-  color: var(--color-text-secondary);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
+.product-quantity label {
+  font-weight: 500;
+  color: #333;
+}
+
+.quantity-input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.quantity-input:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
 /* ==========================================================================
@@ -1015,4 +1015,21 @@ label {
   .product-dimension-separator {
     transform: rotate(90deg);
   }
+}
+
+/* Error Message Styles */
+.error-message {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.form-input.error {
+  border: 1px solid #dc3545;
+}
+
+.form-input.error:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
 }
