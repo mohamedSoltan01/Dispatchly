@@ -81,6 +81,16 @@ export default function Organizations() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [showNewOrgForm, setShowNewOrgForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    adminEmail: "",
+    password: "",
+    phone: "",
+    ceo: "",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [showDetailsCard, setShowDetailsCard] = useState(false);
 
   // Handle search
   const handleSearch = useCallback((event) => {
@@ -134,6 +144,45 @@ export default function Organizations() {
     [organizations]
   );
 
+  // Handle delete organization
+  const handleDeleteOrg = useCallback(() => {
+    if (selectedOrg) {
+      const updatedOrgs = organizations.filter(
+        (org) => org.id !== selectedOrg.id
+      );
+      setOrganizations(updatedOrgs);
+      localStorage.setItem("organizations", JSON.stringify(updatedOrgs));
+      handleMenuClose();
+    }
+  }, [selectedOrg, organizations, handleMenuClose]);
+
+  // Handle edit organization
+  const handleEditOrg = useCallback(() => {
+    if (selectedOrg) {
+      setFormData({
+        name: selectedOrg.name,
+        adminEmail: selectedOrg.creatorEmail,
+        password: "", // Password should not be pre-filled for security reasons
+        phone: "", // Assuming phone is not stored, adjust if needed
+        ceo: "", // Assuming CEO is not stored, adjust if needed
+      });
+      setShowNewOrgForm(true);
+    }
+  }, [selectedOrg]);
+
+  // Handle view details
+  const handleViewDetails = useCallback(() => {
+    if (selectedOrg) {
+      setShowDetailsCard(true);
+    }
+  }, [selectedOrg]);
+
+  // Handle back button
+  const handleBack = useCallback(() => {
+    setShowDetailsCard(false);
+    handleMenuClose();
+  }, [handleMenuClose]);
+
   // Filter organizations based on search query
   const filteredOrganizations = organizations.filter(
     (org) =>
@@ -152,9 +201,95 @@ export default function Organizations() {
           Back to Organizations
         </button>
         <NewOrgCard
-          onCancel={() => setShowNewOrgForm(false)}
+          onCancel={() => {
+            setShowNewOrgForm(false);
+            handleMenuClose();
+          }}
           onOrgAdded={handleOrgAdded}
+          formData={formData}
+          showPassword={showPassword}
+          passwordError={passwordError}
+          setFormData={setFormData}
+          setShowPassword={setShowPassword}
+          setPasswordError={setPasswordError}
         />
+      </div>
+    );
+  }
+
+  if (showDetailsCard) {
+    return (
+      <div className="container">
+        <main className="content">
+          <div className="content-wrapper">
+            {/* Back Button */}
+            <button className="back-button" onClick={handleBack}>
+              <ArrowBackIcon />
+              Back
+            </button>
+
+            {/* Breadcrumb */}
+
+            {/* Page Title */}
+            <h1 className="page-title">ORG info</h1>
+
+            {/* Organization Name */}
+            <div className="org-name">
+              <h2>{selectedOrg.name}</h2>
+            </div>
+
+            {/* Form Fields */}
+            <div className="form-fields">
+              {/* Contractor Name */}
+              <div className="form-group">
+                <label className="form-label">contractor name</label>
+                <input value="Jack Adams" className="form-input" readOnly />
+              </div>
+
+              {/* Contacts */}
+              <div className="form-group">
+                <label className="form-label">Contacts</label>
+                <div className="contacts-container">
+                  <input
+                    value="01122334456"
+                    className="form-input contact-input"
+                    readOnly
+                  />
+                  <input
+                    value="01214545658"
+                    className="form-input contact-input"
+                    readOnly
+                  />
+                  <input
+                    value="01001055446"
+                    className="form-input contact-input"
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              {/* Org CEO */}
+              <div className="form-group">
+                <label className="form-label">Org CEO</label>
+                <input
+                  value="Seif El-Din El-Sabbagh"
+                  className="form-input"
+                  readOnly
+                />
+              </div>
+
+              {/* Admin Email */}
+              <div className="form-group">
+                <label className="form-label">Admin Email</label>
+                <input
+                  value={selectedOrg.creatorEmail}
+                  className="form-input email-input"
+                  readOnly
+                />
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -248,9 +383,9 @@ export default function Organizations() {
         onClose={handleMenuClose}
         className="org-menu"
       >
-        <MenuItem onClick={handleMenuClose}>View Details</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Edit Organization</MenuItem>
-        <MenuItem onClick={handleMenuClose} className="delete-option">
+        <MenuItem onClick={handleViewDetails}>View Details</MenuItem>
+        <MenuItem onClick={handleEditOrg}>Edit Organization</MenuItem>
+        <MenuItem onClick={handleDeleteOrg} className="delete-option">
           Delete Organization
         </MenuItem>
       </Menu>
@@ -259,34 +394,16 @@ export default function Organizations() {
 }
 
 // New Organization Card Component
-function NewOrgCard({ onCancel, onOrgAdded }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    adminEmail: "",
-    password: "",
-    phone: "",
-    ceo: "",
-  });
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
-
-  const validatePassword = (password) => {
-    if (password.length < 8) {
-      return "Password must be at least 8 characters long";
-    }
-    if (!/[A-Z]/.test(password)) {
-      return "Password must contain at least one uppercase letter";
-    }
-    if (!/[a-z]/.test(password)) {
-      return "Password must contain at least one lowercase letter";
-    }
-    if (!/[0-9]/.test(password)) {
-      return "Password must contain at least one number";
-    }
-    return "";
-  };
-
+function NewOrgCard({
+  onCancel,
+  onOrgAdded,
+  formData,
+  showPassword,
+  passwordError,
+  setFormData,
+  setShowPassword,
+  setPasswordError,
+}) {
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({
@@ -306,6 +423,22 @@ function NewOrgCard({ onCancel, onOrgAdded }) {
       return;
     }
     onOrgAdded(formData);
+  };
+
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long";
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Password must contain at least one number";
+    }
+    return "";
   };
 
   return (

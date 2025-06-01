@@ -141,6 +141,16 @@ export default function Users() {
     },
   ];
 
+  // Implement handleDeleteUser function
+  const handleDeleteUser = useCallback(
+    (userId) => {
+      const updatedUsers = users.filter((user) => user.id !== userId);
+      setUsers(updatedUsers);
+      localStorage.setItem("users", JSON.stringify(updatedUsers));
+    },
+    [users]
+  );
+
   if (showNewUserForm) {
     return (
       <div className="users-container">
@@ -194,14 +204,6 @@ export default function Users() {
             ),
           }}
         />
-        <Button
-          variant="outlined"
-          startIcon={<FilterListIcon />}
-          onClick={handleFilterOpen}
-          className="filter-button"
-        >
-          Filter
-        </Button>
       </div>
 
       <TableContainer component={Paper} className="users-table">
@@ -214,7 +216,7 @@ export default function Users() {
               <TableCell>Last Login</TableCell>
               <TableCell>Created At</TableCell>
               <TableCell>Role</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell align="right">Delete</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -237,44 +239,19 @@ export default function Users() {
                   />
                 </TableCell>
                 <TableCell align="right">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleMenuOpen(e, user)}
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => handleDeleteUser(user.id)}
                   >
-                    <MoreVertIcon />
-                  </IconButton>
+                    Delete
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* User Actions Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        className="user-menu"
-      >
-        <MenuItem onClick={handleMenuClose}>View Details</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Edit User</MenuItem>
-        <MenuItem onClick={handleMenuClose} className="delete-option">
-          Delete User
-        </MenuItem>
-      </Menu>
-
-      {/* Filter Menu */}
-      <Menu
-        anchorEl={filterAnchorEl}
-        open={Boolean(filterAnchorEl)}
-        onClose={handleFilterClose}
-        className="filter-menu"
-      >
-        <MenuItem onClick={handleFilterClose}>All Users</MenuItem>
-        <MenuItem onClick={handleFilterClose}>Planning</MenuItem>
-        <MenuItem onClick={handleFilterClose}>Dispatch</MenuItem>
-      </Menu>
     </div>
   );
 }

@@ -67,7 +67,7 @@ body {
 /* ==========================================================================
    Layout Components
    ========================================================================== */
-.container {
+.neworder-container {
   min-height: 100%;
   width: 100%;
   background-color: var(--color-background);
@@ -314,11 +314,11 @@ body {
   background-color: var(--color-background);
 }
 
-.page-header {
+.neworder-page-title {
   margin-bottom: var(--spacing-xl);
 }
 
-.back-button {
+.neworder-back-button {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
@@ -333,11 +333,11 @@ body {
   transition: color 0.2s ease;
 }
 
-.back-button:hover {
+.neworder-back-button:hover {
   color: var(--color-text-primary);
 }
 
-.back-button svg {
+.neworder-back-button svg {
   font-size: 20px;
 }
 

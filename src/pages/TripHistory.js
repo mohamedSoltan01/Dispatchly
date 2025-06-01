@@ -47,6 +47,16 @@ const getStatusColor = (status) => {
 
 // Trip Details Card Component
 function TripDetailsCard({ trip, onClose }) {
+  const [showOrders, setShowOrders] = useState(false);
+
+  const handleViewOrders = () => {
+    setShowOrders(true);
+  };
+
+  const handleCloseOrders = () => {
+    setShowOrders(false);
+  };
+
   return (
     <div className="trip-details-container">
       <div className="trip-details-header">
@@ -99,12 +109,47 @@ function TripDetailsCard({ trip, onClose }) {
                 </div>
                 <div className="info-item">
                   <div className="info-label">
-                    <ScaleIcon fontSize="small" />
-                    <Typography variant="body2">Weight</Typography>
+                    <LocalShippingIcon fontSize="small" />
+                    <Typography variant="body2">Assigned Vehicle</Typography>
                   </div>
                   <Typography variant="body1" className="info-value">
-                    {trip.weight}
+                    {trip.assignedVehicle || "Vehicle 123"}
                   </Typography>
+                </div>
+                <div className="info-item">
+                  <div className="info-label">
+                    <AccessTimeIcon fontSize="small" />
+                    <Typography variant="body2">Pickup Date & Time</Typography>
+                  </div>
+                  <Typography variant="body1" className="info-value">
+                    {trip.pickupDateTime || "2024-03-14 10:00 AM"}
+                  </Typography>
+                </div>
+                <div className="info-item">
+                  <div className="info-label">
+                    <AccessTimeIcon fontSize="small" />
+                    <Typography variant="body2">Arrival Date & Time</Typography>
+                  </div>
+                  <Typography variant="body1" className="info-value">
+                    {new Date(trip.arrivalDate).toLocaleString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </Typography>
+                </div>
+                <div className="info-item">
+                  <div className="info-label">
+                    <Typography variant="body2">Orders in Trip</Typography>
+                  </div>
+                  <Typography variant="body1" className="info-value">
+                    {trip.ordersInTrip || 5}
+                  </Typography>
+                  <Button variant="outlined" onClick={handleViewOrders}>
+                    View Orders
+                  </Button>
                 </div>
               </div>
             </div>
@@ -149,6 +194,33 @@ function TripDetailsCard({ trip, onClose }) {
           </Grid>
         </Grid>
       </div>
+
+      {showOrders && (
+        <div className="orders-floating-card">
+          <Button onClick={handleCloseOrders} className="close-orders-button">
+            X
+          </Button>
+          <Typography variant="h6">Orders</Typography>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Product</TableCell>
+                  <TableCell>Product ID</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {trip.orders.map((order, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{order.product}</TableCell>
+                    <TableCell>{order.productId}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </div>
+      )}
     </div>
   );
 }
@@ -160,41 +232,63 @@ export default function TripHistory() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [showTripDetails, setShowTripDetails] = useState(false);
-
-  // Mock data for trip history
-  const tripHistory = [
+  const [tripHistory, setTripHistory] = useState([
     {
       id: "TRIP001",
       status: "Completed",
       customer: "John Smith",
       departure: "New York Warehouse",
-      type: "Express",
+      type: "Inbound",
       weight: "500 kg",
       arrivalLocation: "Boston Distribution Center",
       arrivalDate: "2024-03-15",
+      assignedVehicle: "Truck 001",
+      pickupDateTime: "2024-03-14 08:00 AM",
+      ordersInTrip: 3,
+      orders: [
+        { product: "Product A", productId: "PA001" },
+        { product: "Product B", productId: "PB002" },
+        { product: "Product C", productId: "PC003" },
+      ],
     },
     {
       id: "TRIP002",
       status: "In Progress",
       customer: "Sarah Johnson",
       departure: "Chicago Hub",
-      type: "Standard",
+      type: "Outbound",
       weight: "750 kg",
       arrivalLocation: "Detroit Facility",
       arrivalDate: "2024-03-16",
+      assignedVehicle: "Van 002",
+      pickupDateTime: "2024-03-15 09:00 AM",
+      ordersInTrip: 2,
+      orders: [
+        { product: "Product D", productId: "PD004" },
+        { product: "Product E", productId: "PE005" },
+      ],
     },
     {
       id: "TRIP003",
       status: "Cancelled",
       customer: "Mike Brown",
       departure: "Los Angeles Depot",
-      type: "Express",
+      type: "Inbound",
       weight: "300 kg",
       arrivalLocation: "San Francisco Center",
       arrivalDate: "2024-03-14",
+      assignedVehicle: "Truck 003",
+      pickupDateTime: "2024-03-13 07:30 AM",
+      ordersInTrip: 4,
+      orders: [
+        { product: "Product F", productId: "PF006" },
+        { product: "Product G", productId: "PG007" },
+        { product: "Product H", productId: "PH008" },
+        { product: "Product I", productId: "PI009" },
+      ],
     },
     // Add more mock data as needed
-  ];
+  ]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -232,7 +326,14 @@ export default function TripHistory() {
   const handleViewDetails = (trip) => {
     setSelectedTrip(trip);
     setShowTripDetails(true);
-    handleMenuClose();
+  };
+
+  const handleDeleteTrip = (tripId) => {
+    const updatedTrips = tripHistory.filter((trip) => trip.id !== tripId);
+    // Update the state with the filtered trips
+    setTripHistory(updatedTrips);
+    // Optionally, update persistent storage if needed
+    console.log(`Deleted trip with ID: ${tripId}`);
   };
 
   if (showTripDetails && selectedTrip) {
@@ -292,7 +393,11 @@ export default function TripHistory() {
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((trip) => (
                 <TableRow key={trip.id}>
-                  <TableCell>{trip.id}</TableCell>
+                  <TableCell>
+                    <Button onClick={() => handleViewDetails(trip)}>
+                      {trip.id}
+                    </Button>
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={trip.status}
@@ -318,12 +423,13 @@ export default function TripHistory() {
                     })}
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, trip)}
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => handleDeleteTrip(trip.id)}
                     >
-                      <MoreVertIcon />
-                    </IconButton>
+                      Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
