@@ -22,6 +22,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import "../styles/Organizations.css";
+import { addNotification } from "../utils/notifications";
 
 // Mock data for organizations
 const mockOrganizations = [
@@ -136,6 +137,13 @@ export default function Organizations() {
         const updatedOrgs = [...organizations, orgToAdd];
         setOrganizations(updatedOrgs);
         localStorage.setItem("organizations", JSON.stringify(updatedOrgs));
+
+        // Add notification for new organization
+        addNotification("new_organization", {
+          orgName: newOrg.name,
+          adminEmail: newOrg.adminEmail,
+        });
+
         setShowNewOrgForm(false);
       } catch (error) {
         console.error("Error adding new organization:", error);

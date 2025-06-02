@@ -31,6 +31,7 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import "../styles/Cars.css";
+import { addNotification } from "../utils/notifications";
 
 // Initial mock data for vehicles
 const initialMockCars = [
@@ -166,6 +167,15 @@ function Cars() {
     setCars(updatedCars);
     localStorage.setItem("cars", JSON.stringify(updatedCars));
     setShowNewCarForm(false);
+
+    // Add notification for new car
+    addNotification({
+      type: "new_car",
+      plateNumber: newCar.plateNumber,
+      make: newCar.make,
+      model: newCar.model,
+      type: newCar.type,
+    });
   };
 
   const handleDeleteCar = (carId) => {

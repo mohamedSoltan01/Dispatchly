@@ -32,6 +32,7 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import "../styles/Products.css";
+import { addNotification } from "../utils/notifications";
 
 // Move mock data outside component but keep it as a constant
 const initialMockProducts = [
@@ -148,28 +149,36 @@ function Products({ onProductSelect, isSelectionMode = false }) {
   };
 
   const handleProductAdded = (newProduct) => {
-    try {
-      const productToAdd = {
-        id: `PRD${String(products.length + 1).padStart(3, "0")}`,
-        skuName: newProduct.sku,
-        dimensions: `${newProduct.length}x${newProduct.width}x${newProduct.height}`,
-        weight: newProduct.weight,
-        temperature: newProduct.minMaxTemp
-          ? `${newProduct.minTemp}-${newProduct.maxTemp}°C`
-          : "N/A",
-        numberOfBoxes: 1, // Default value, can be updated later
-        boxType: newProduct.boxType,
-        currentLocation: newProduct.location,
-        category: newProduct.category,
-      };
+    const productToAdd = {
+      id: `PRD${Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0")}`,
+      sku: newProduct.sku,
+      dimensions: {
+        length: newProduct.length,
+        width: newProduct.width,
+        height: newProduct.height,
+      },
+      weight: newProduct.weight,
+      temperature: newProduct.temperature,
+      boxType: newProduct.boxType,
+      location: newProduct.location,
+      category: newProduct.category,
+      createdAt: new Date().toISOString(),
+    };
 
-      const updatedProducts = [...products, productToAdd];
-      setProducts(updatedProducts);
-      localStorage.setItem("products", JSON.stringify(updatedProducts));
-      setShowNewProductForm(false);
-    } catch (error) {
-      console.error("Error adding new product:", error);
-    }
+    const updatedProducts = [...products, productToAdd];
+    setProducts(updatedProducts);
+    localStorage.setItem("products", JSON.stringify(updatedProducts));
+    setShowNewProductForm(false);
+
+    // Add notification for new product
+    addNotification({
+      type: "new_product",
+      productName: newProduct.sku,
+      category: newProduct.category,
+      location: newProduct.location,
+    });
   };
 
   const handleDeleteProduct = (productId) => {

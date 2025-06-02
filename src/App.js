@@ -19,6 +19,7 @@ import Locations from "./pages/Locations";
 import Products from "./pages/Products";
 import Cars from "./pages/Cars";
 import Account from "./pages/Account";
+import Notifications from "./pages/notifications";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // New AppContent component that contains the routing logic
@@ -178,6 +179,7 @@ function AppContent() {
           />
           <Route path="/cars" element={<Cars />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Routes>
       </div>
     </div>

@@ -39,6 +39,7 @@ import {
   shadows,
   borderRadius,
 } from "../styles/designSystem";
+import { addNotification } from "../utils/notifications";
 
 // Mock data for initial state
 const initialMockOrders = [
@@ -233,6 +234,14 @@ function DispatchOrder() {
       // Update the status of selected orders
       const updatedOrders = allOrders.map((order) => {
         if (selectedOrders.includes(order.id)) {
+          // Add notification for each dispatched order
+          addNotification("dispatch_order", {
+            orderId: order.id,
+            type: order.type,
+            destination: order.arrivalLocation,
+            weight: order.weight,
+          });
+
           return {
             ...order,
             status: "dispatched",

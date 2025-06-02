@@ -15,6 +15,7 @@ import {
   borderRadius,
 } from "../styles/designSystem";
 import { useNavigate } from "react-router-dom";
+import { addNotification } from "../utils/notifications";
 
 export default function NewOrder({ selectedProducts, onClearProducts }) {
   const navigate = useNavigate();
@@ -727,7 +728,7 @@ function OrderForm({
 
         // Create order details object with the unique ID
         const orderDetails = {
-          id: orderId, // This is now guaranteed to be unique
+          id: orderId,
           customer: "Customer Name", // Mock data until backend integration
           departureLocation: warehouse,
           type: type === "inbound" ? "Inbound" : "Outbound",
@@ -735,8 +736,8 @@ function OrderForm({
           arrivalLocation: destination,
           arrivalDate: date,
           pickupTime: pickupTime,
-          status: "pending", // Add status field
-          dispatchedAt: null, // Add dispatchedAt field
+          status: "pending",
+          dispatchedAt: null,
           products: products.map((product) => ({
             skuName: product.skuName,
             quantity: product.quantity,
@@ -757,6 +758,14 @@ function OrderForm({
           );
           const updatedOrders = [...existingOrders, orderDetails];
           localStorage.setItem("dispatchOrders", JSON.stringify(updatedOrders));
+
+          // Add notification for new order
+          addNotification("new_order", {
+            orderId: orderId,
+            type: type === "inbound" ? "Inbound" : "Outbound",
+            weight: `${totalWeight} kg`,
+            destination: destination,
+          });
         } catch (error) {
           console.error("Error saving order to dispatch list:", error);
         }

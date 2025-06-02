@@ -6,23 +6,19 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
 import { IconButton, Badge, Menu, MenuItem, Avatar } from "@mui/material";
+import { useNotificationCount } from "../hooks/useNotificationCount";
 
 export default function Navbar({ toggleSidebar }) {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
-  const [notificationsAnchor, setNotificationsAnchor] = useState(null);
+  const unreadCount = useNotificationCount();
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleNotificationsOpen = (event) => {
-    setNotificationsAnchor(event.currentTarget);
-  };
-
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setNotificationsAnchor(null);
   };
 
   const handleProfileClick = () => {
@@ -34,6 +30,10 @@ export default function Navbar({ toggleSidebar }) {
     handleMenuClose();
     // Add sign out logic here
     console.log("Signing out...");
+  };
+
+  const handleNotificationsClick = () => {
+    navigate("/notifications");
   };
 
   return (
@@ -59,10 +59,25 @@ export default function Navbar({ toggleSidebar }) {
 
       <div className="header-right" style={{ gap: spacing.md }}>
         <IconButton
-          onClick={handleNotificationsOpen}
-          sx={{ color: colors.text.secondary }}
+          onClick={handleNotificationsClick}
+          sx={{
+            color: colors.text.secondary,
+            "&:hover": {
+              backgroundColor: colors.background.hover,
+            },
+          }}
         >
-          <Badge badgeContent={3} color="error">
+          <Badge
+            badgeContent={unreadCount}
+            color="error"
+            sx={{
+              "& .MuiBadge-badge": {
+                backgroundColor: unreadCount > 0 ? colors.error : "transparent",
+                color: unreadCount > 0 ? colors.text.white : "transparent",
+                boxShadow: unreadCount > 0 ? "0 0 0 2px white" : "none",
+              },
+            }}
+          >
             <NotificationsIcon />
           </Badge>
         </IconButton>
@@ -109,85 +124,6 @@ export default function Navbar({ toggleSidebar }) {
             }}
           >
             Sign Out
-          </MenuItem>
-        </Menu>
-
-        {/* Notifications Menu */}
-        <Menu
-          anchorEl={notificationsAnchor}
-          open={Boolean(notificationsAnchor)}
-          onClose={handleMenuClose}
-          PaperProps={{
-            style: {
-              marginTop: spacing.sm,
-              minWidth: "300px",
-              maxHeight: "400px",
-              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-            },
-          }}
-        >
-          <MenuItem onClick={handleMenuClose}>
-            <div style={{ padding: spacing.sm }}>
-              <div
-                style={{
-                  ...typography.body2,
-                  color: colors.text.primary,
-                  marginBottom: spacing.xs,
-                }}
-              >
-                New order #1234 has been assigned
-              </div>
-              <div
-                style={{
-                  ...typography.caption,
-                  color: colors.text.secondary,
-                }}
-              >
-                5 minutes ago
-              </div>
-            </div>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose}>
-            <div style={{ padding: spacing.sm }}>
-              <div
-                style={{
-                  ...typography.body2,
-                  color: colors.text.primary,
-                  marginBottom: spacing.xs,
-                }}
-              >
-                Trip #5678 has been completed
-              </div>
-              <div
-                style={{
-                  ...typography.caption,
-                  color: colors.text.secondary,
-                }}
-              >
-                1 hour ago
-              </div>
-            </div>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose}>
-            <div style={{ padding: spacing.sm }}>
-              <div
-                style={{
-                  ...typography.body2,
-                  color: colors.text.primary,
-                  marginBottom: spacing.xs,
-                }}
-              >
-                New driver has been added
-              </div>
-              <div
-                style={{
-                  ...typography.caption,
-                  color: colors.text.secondary,
-                }}
-              >
-                2 hours ago
-              </div>
-            </div>
           </MenuItem>
         </Menu>
       </div>

@@ -23,6 +23,7 @@ import AddIcon from "@mui/icons-material/Add";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import "../styles/Users.css";
+import { addNotification } from "../utils/notifications";
 
 // Mock data for users
 const mockUsers = [
@@ -116,6 +117,14 @@ export default function Users() {
         const updatedUsers = [...users, userToAdd];
         setUsers(updatedUsers);
         localStorage.setItem("users", JSON.stringify(updatedUsers));
+
+        // Add notification for new user
+        addNotification("new_user", {
+          userName: newUser.name,
+          role: newUser.role,
+          email: newUser.email,
+        });
+
         setShowNewUserForm(false);
       } catch (error) {
         console.error("Error adding new user:", error);

@@ -1,0 +1,23 @@
+.notifications-container {
+  padding: var(--spacing-lg);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+}
+
+.notifications-header h5 {
+  margin: 0;
+  margin-left: var(--spacing-md);
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .notifications-container {
+    padding: var(--spacing-md);
+  }
+}
