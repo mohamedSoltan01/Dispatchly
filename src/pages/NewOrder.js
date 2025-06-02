@@ -73,7 +73,8 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
     try {
       setSelectedOption(option);
       localStorage.setItem("newOrderOption", option);
-      setShowOrderForm(true);
+      // Only show order form for portal option
+      setShowOrderForm(option === "portal");
     } finally {
       updateInProgress.current = false;
     }
@@ -85,9 +86,13 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
 
     updateInProgress.current = true;
     try {
-      if (showOrderForm) {
+      if (showOrderForm || selectedOption === "portal") {
         // If we're in the order form, go back to options
         setShowOrderForm(false);
+        setSelectedOption("");
+        localStorage.removeItem("newOrderOption");
+      } else if (selectedOption === "excel") {
+        // If we're in excel view, go back to options
         setSelectedOption("");
         localStorage.removeItem("newOrderOption");
       } else if (selectedType) {
@@ -99,7 +104,7 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
     } finally {
       updateInProgress.current = false;
     }
-  }, [showOrderForm, selectedType, onClearProducts]);
+  }, [showOrderForm, selectedType, selectedOption, onClearProducts]);
 
   // Handle successful order submission
   const handleOrderSuccess = useCallback(() => {
@@ -142,6 +147,21 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
     "- Upload the file",
   ];
 
+  if (selectedOption === "excel") {
+    return (
+      <div className="container">
+        <button className="back-button" onClick={handleBack}>
+          <ArrowBackIcon />
+          Back to Options
+        </button>
+        <ExcelUpload
+          onFileChange={(file) => console.log("File changed:", file)}
+          onSubmit={() => console.log("Submit excel")}
+        />
+      </div>
+    );
+  }
+
   if (selectedOption === "portal" || showOrderForm) {
     return (
       <div className="container">
@@ -156,21 +176,6 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
           onOptionChange={handleOptionSelect}
           onClearProducts={onClearProducts}
           onOrderSuccess={handleOrderSuccess}
-        />
-      </div>
-    );
-  }
-
-  if (selectedOption === "excel") {
-    return (
-      <div className="container">
-        <button className="back-button" onClick={handleBack}>
-          <ArrowBackIcon />
-          Back to Options
-        </button>
-        <ExcelUpload
-          onFileChange={(file) => console.log("File changed:", file)}
-          onSubmit={() => console.log("Submit excel")}
         />
       </div>
     );
@@ -450,6 +455,25 @@ function ProductCard({ product, index, onQuantityChange, onRemove }) {
   );
 }
 
+// Function to generate a unique order ID
+const generateUniqueOrderId = () => {
+  // Get all existing orders from localStorage
+  const existingOrders = JSON.parse(
+    localStorage.getItem("dispatchOrders") || "[]"
+  );
+  const existingIds = new Set(existingOrders.map((order) => order.id));
+
+  // Generate a new ID and check if it exists
+  let newId;
+  do {
+    // Format: FB + random 6 digits
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    newId = `FB${randomNum}`;
+  } while (existingIds.has(newId));
+
+  return newId;
+};
+
 function OrderForm({
   type,
   selectedProducts,
@@ -459,7 +483,10 @@ function OrderForm({
   onOrderSuccess,
 }) {
   const navigate = useNavigate();
-  const [orderId] = useState("FB0204819");
+  const [orderId, setOrderId] = useState(() => {
+    // Generate a unique ID when the component mounts
+    return generateUniqueOrderId();
+  });
   const [warehouse, setWarehouse] = useState(() => {
     const saved = localStorage.getItem("orderWarehouse");
     return saved || "";
@@ -660,6 +687,20 @@ function OrderForm({
           newErrors.products = "At least one product is required";
         }
 
+        // Verify order ID is still unique before submission
+        const existingOrders = JSON.parse(
+          localStorage.getItem("dispatchOrders") || "[]"
+        );
+        if (existingOrders.some((order) => order.id === orderId)) {
+          // If ID is no longer unique, generate a new one
+          const newOrderId = generateUniqueOrderId();
+          setOrderId(newOrderId);
+          newErrors.submit =
+            "Order ID was updated. Please try submitting again.";
+          setErrors(newErrors);
+          return;
+        }
+
         // Direct date comparison
         if (date) {
           const today = new Date();
@@ -678,14 +719,24 @@ function OrderForm({
 
         setIsSubmitting(true);
 
-        // Create order details object
+        // Calculate total weight
+        const totalWeight = products.reduce((sum, product) => {
+          const weight = parseFloat(product.weight) || 0;
+          return sum + weight * product.quantity;
+        }, 0);
+
+        // Create order details object with the unique ID
         const orderDetails = {
-          orderId,
-          type,
-          warehouse,
-          date,
-          pickupTime,
-          destination,
+          id: orderId, // This is now guaranteed to be unique
+          customer: "Customer Name", // Mock data until backend integration
+          departureLocation: warehouse,
+          type: type === "inbound" ? "Inbound" : "Outbound",
+          weight: `${totalWeight} kg`,
+          arrivalLocation: destination,
+          arrivalDate: date,
+          pickupTime: pickupTime,
+          status: "pending", // Add status field
+          dispatchedAt: null, // Add dispatchedAt field
           products: products.map((product) => ({
             skuName: product.skuName,
             quantity: product.quantity,
@@ -698,6 +749,17 @@ function OrderForm({
             category: product.category,
           })),
         };
+
+        // Save to dispatch orders list
+        try {
+          const existingOrders = JSON.parse(
+            localStorage.getItem("dispatchOrders") || "[]"
+          );
+          const updatedOrders = [...existingOrders, orderDetails];
+          localStorage.setItem("dispatchOrders", JSON.stringify(updatedOrders));
+        } catch (error) {
+          console.error("Error saving order to dispatch list:", error);
+        }
 
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -715,7 +777,16 @@ function OrderForm({
         updateInProgress.current = false;
       }
     },
-    [products, warehouse, date, pickupTime, destination, type, onOrderSuccess]
+    [
+      products,
+      warehouse,
+      date,
+      pickupTime,
+      destination,
+      type,
+      orderId,
+      onOrderSuccess,
+    ]
   );
 
   if (showThankYou) {
