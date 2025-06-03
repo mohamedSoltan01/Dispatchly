@@ -225,6 +225,118 @@ function TripDetailsCard({ trip, onClose }) {
   );
 }
 
+// Mock data for trips - shared between Dashboard and TripHistory
+export const mockTripHistory = [
+  {
+    id: "TRIP001",
+    status: "Completed",
+    customer: "John Smith",
+    departure: "New York Warehouse",
+    type: "Inbound",
+    weight: "500 kg",
+    arrivalLocation: "Boston Distribution Center",
+    arrivalDate: "2024-03-15",
+    assignedVehicle: "Truck 001",
+    pickupDateTime: "2024-03-14 08:00 AM",
+    ordersInTrip: 3,
+    orders: [
+      { product: "Product A", productId: "PA001" },
+      { product: "Product B", productId: "PB002" },
+      { product: "Product C", productId: "PC003" },
+    ],
+  },
+  {
+    id: "TRIP002",
+    status: "In Progress",
+    customer: "Sarah Johnson",
+    departure: "Chicago Hub",
+    type: "Outbound",
+    weight: "750 kg",
+    arrivalLocation: "Detroit Facility",
+    arrivalDate: "2024-03-16",
+    assignedVehicle: "Van 002",
+    pickupDateTime: "2024-03-15 09:00 AM",
+    ordersInTrip: 2,
+    orders: [
+      { product: "Product D", productId: "PD004" },
+      { product: "Product E", productId: "PE005" },
+    ],
+  },
+  {
+    id: "TRIP003",
+    status: "Cancelled",
+    customer: "Mike Brown",
+    departure: "Los Angeles Depot",
+    type: "Inbound",
+    weight: "300 kg",
+    arrivalLocation: "San Francisco Center",
+    arrivalDate: "2024-03-14",
+    assignedVehicle: "Truck 003",
+    pickupDateTime: "2024-03-13 07:30 AM",
+    ordersInTrip: 4,
+    orders: [
+      { product: "Product F", productId: "PF006" },
+      { product: "Product G", productId: "PG007" },
+      { product: "Product H", productId: "PH008" },
+      { product: "Product I", productId: "PI009" },
+    ],
+  },
+  {
+    id: "TRIP004",
+    status: "Completed",
+    customer: "Emily Davis",
+    departure: "Miami Port",
+    type: "Outbound",
+    weight: "600 kg",
+    arrivalLocation: "Orlando Hub",
+    arrivalDate: "2024-03-13",
+    assignedVehicle: "Truck 004",
+    pickupDateTime: "2024-03-12 10:00 AM",
+    ordersInTrip: 3,
+    orders: [
+      { product: "Product J", productId: "PJ010" },
+      { product: "Product K", productId: "PK011" },
+      { product: "Product L", productId: "PL012" },
+    ],
+  },
+  {
+    id: "TRIP005",
+    status: "In Progress",
+    customer: "David Wilson",
+    departure: "Seattle Terminal",
+    type: "Inbound",
+    weight: "450 kg",
+    arrivalLocation: "Portland Center",
+    arrivalDate: "2024-03-17",
+    assignedVehicle: "Van 005",
+    pickupDateTime: "2024-03-16 08:30 AM",
+    ordersInTrip: 2,
+    orders: [
+      { product: "Product M", productId: "PM013" },
+      { product: "Product N", productId: "PN014" },
+    ],
+  },
+  {
+    id: "TRIP006",
+    status: "Completed",
+    customer: "Lisa Anderson",
+    departure: "Denver Hub",
+    type: "Outbound",
+    weight: "550 kg",
+    arrivalLocation: "Salt Lake City",
+    arrivalDate: "2024-03-12",
+    assignedVehicle: "Truck 006",
+    pickupDateTime: "2024-03-11 09:15 AM",
+    ordersInTrip: 4,
+    orders: [
+      { product: "Product O", productId: "PO015" },
+      { product: "Product P", productId: "PP016" },
+      { product: "Product Q", productId: "PQ017" },
+      { product: "Product R", productId: "PR018" },
+    ],
+  },
+];
+
 export default function TripHistory() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -232,63 +344,7 @@ export default function TripHistory() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [showTripDetails, setShowTripDetails] = useState(false);
-  const [tripHistory, setTripHistory] = useState([
-    {
-      id: "TRIP001",
-      status: "Completed",
-      customer: "John Smith",
-      departure: "New York Warehouse",
-      type: "Inbound",
-      weight: "500 kg",
-      arrivalLocation: "Boston Distribution Center",
-      arrivalDate: "2024-03-15",
-      assignedVehicle: "Truck 001",
-      pickupDateTime: "2024-03-14 08:00 AM",
-      ordersInTrip: 3,
-      orders: [
-        { product: "Product A", productId: "PA001" },
-        { product: "Product B", productId: "PB002" },
-        { product: "Product C", productId: "PC003" },
-      ],
-    },
-    {
-      id: "TRIP002",
-      status: "In Progress",
-      customer: "Sarah Johnson",
-      departure: "Chicago Hub",
-      type: "Outbound",
-      weight: "750 kg",
-      arrivalLocation: "Detroit Facility",
-      arrivalDate: "2024-03-16",
-      assignedVehicle: "Van 002",
-      pickupDateTime: "2024-03-15 09:00 AM",
-      ordersInTrip: 2,
-      orders: [
-        { product: "Product D", productId: "PD004" },
-        { product: "Product E", productId: "PE005" },
-      ],
-    },
-    {
-      id: "TRIP003",
-      status: "Cancelled",
-      customer: "Mike Brown",
-      departure: "Los Angeles Depot",
-      type: "Inbound",
-      weight: "300 kg",
-      arrivalLocation: "San Francisco Center",
-      arrivalDate: "2024-03-14",
-      assignedVehicle: "Truck 003",
-      pickupDateTime: "2024-03-13 07:30 AM",
-      ordersInTrip: 4,
-      orders: [
-        { product: "Product F", productId: "PF006" },
-        { product: "Product G", productId: "PG007" },
-        { product: "Product H", productId: "PH008" },
-        { product: "Product I", productId: "PI009" },
-      ],
-    },
-    // Add more mock data as needed
-  ]);
+  const [tripHistory, setTripHistory] = useState(mockTripHistory);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

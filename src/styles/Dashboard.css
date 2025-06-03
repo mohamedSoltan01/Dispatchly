@@ -1,0 +1,547 @@
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+body {
+  background-color: #f0f0f0;
+  color: #1d1b20;
+  line-height: 1.5;
+  overflow: hidden; /* Prevent body scrolling */
+}
+
+/* Dashboard layout */
+.dashboard {
+  height: calc(100vh - 64px); /* Subtract navbar height */
+  padding: 1rem;
+  background-color: #f0f0f0;
+  overflow: hidden; /* Prevent dashboard scrolling */
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Left column takes 2/3, right column takes 1/3 */
+  gap: 1rem;
+  height: 100%;
+  max-height: 100%;
+}
+
+/* Left column layout */
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: 100%;
+  min-width: 0; /* Prevent grid item from overflowing */
+}
+
+.top-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two equal columns for cargo and trucks */
+  gap: 1rem;
+  height: 45%; /* Take up 45% of the left column height */
+}
+
+.bottom-section {
+  height: 55%; /* Take up remaining 55% of the left column height */
+  overflow: hidden; /* Prevent scrolling */
+}
+
+/* Right column layout */
+.right-column {
+  height: 100%;
+  overflow: hidden; /* Prevent scrolling */
+  min-width: 0; /* Prevent grid item from overflowing */
+}
+
+/* Grid items */
+.grid-item {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent scrolling */
+}
+
+/* Section headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+}
+
+.section-header h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Content areas */
+.cargo-list,
+.trips-list,
+.table-container {
+  flex: 1;
+  overflow-y: auto; /* Allow scrolling within content areas */
+  padding: 1rem;
+}
+
+/* Available Cargo */
+.cargo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.cargo-item {
+  padding: 16px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-light, #e5e7eb);
+  min-height: 120px; /* Set minimum height to ensure content visibility */
+  display: flex;
+  flex-direction: column;
+}
+
+.cargo-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.cargo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+}
+
+.cargo-id {
+  font-weight: 600;
+  color: var(--text-primary, #1d1b20);
+  font-size: 14px;
+  background-color: var(--background-default, #f5f5f5);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.cargo-sku {
+  color: var(--text-secondary, #666);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cargo-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.cargo-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cargo-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 40px; /* Ensure consistent height for metrics */
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  font-weight: 500;
+}
+
+.metric-value {
+  font-size: 14px;
+  color: var(--text-primary, #1d1b20);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.cargo-category {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto; /* Push category to bottom */
+}
+
+.category-badge {
+  padding: 4px 10px;
+  background-color: var(--background-default, #f5f5f5);
+  color: var(--text-secondary, #666);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Remove unused styles */
+.ghost-button,
+.progress-container,
+.progress-bar,
+.progress-fill,
+.progress-text,
+.cargo-route {
+  display: none;
+}
+
+/* Loading Trucks */
+.truck-stats {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-container {
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 8rem;
+  height: 8rem;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.chart-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.chart-label {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: #666;
+}
+
+.stat-indicator {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+.stat-indicator.active {
+  background-color: #001d66;
+}
+
+.stat-indicator.loading-delayed {
+  background-color: #adc6ff;
+}
+
+.stat-indicator.ready-load {
+  background-color: #69b1ff;
+}
+
+.stat-indicator.unloading-delayed {
+  background-color: #d9d9d9;
+}
+
+.stat-indicator.ready-unload {
+  background-color: #4096ff;
+}
+
+.stat-indicator.canceled {
+  background-color: #ffa39e;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Today's Trips */
+.trips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trip-item {
+  padding: 1rem;
+}
+
+.trip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.trip-id-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trip-icon {
+  width: 2rem;
+  height: 2rem;
+  background-color: #e6f4ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4096ff;
+  font-size: 0.75rem;
+}
+
+.trip-id {
+  font-weight: 500;
+}
+
+.trip-time {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.trip-details {
+  margin-bottom: 0.75rem;
+}
+
+.location-item {
+  margin-bottom: 0.5rem;
+}
+
+.location-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.location-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.location-dot.pickup {
+  background-color: #52c41a;
+}
+
+.location-dot.destination {
+  background-color: #ff3333;
+}
+
+.location-address {
+  font-size: 0.75rem;
+  color: #999;
+  margin-left: 1rem;
+  margin-top: 0.25rem;
+}
+
+.trip-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+/* Orders History */
+.table-container {
+  height: 100%;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.orders-table th {
+  position: sticky;
+  top: 0;
+  background-color: #fafafa;
+  z-index: 1;
+}
+
+.orders-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e6e6e6;
+  font-size: 0.875rem;
+}
+
+.orders-table td.order-id {
+  font-weight: 500;
+}
+
+.orders-table tr:hover {
+  background-color: #fafafa;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-delivered {
+  background-color: #e6f4ff;
+  color: #4096ff;
+}
+
+.status-active {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.status-canceled {
+  background-color: #fff1f0;
+  color: #f5222d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr; /* Stack columns on smaller screens */
+  }
+
+  .top-section {
+    grid-template-columns: 1fr; /* Stack cargo and trucks on smaller screens */
+  }
+
+  .left-column,
+  .right-column {
+    height: auto;
+    max-height: 50vh; /* Limit height on smaller screens */
+  }
+}
+
+/* Loading animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Hover effects */
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.trip-item:hover .map-placeholder {
+  background-color: #e6f4ff;
+  transition: background-color 0.2s ease;
+}
+
+/* Focus states */
+.link-button:focus,
+.ghost-button:focus {
+  outline: 2px solid #4096ff;
+  outline-offset: 2px;
+}
+
+/* Button styles */
+.link-button {
+  background-color: #f0f7ff;
+  color: #4096ff;
+  border: 1px solid #4096ff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.link-button:hover {
+  background-color: #4096ff;
+  color: white;
+  box-shadow: 0 2px 4px rgba(64, 150, 255, 0.2);
+}
+
+.link-button:active {
+  transform: translateY(1px);
+}
+
+/* Section header specific button */
+.section-header .link-button {
+  font-size: 0.813rem;
+  padding: 0.375rem 0.875rem;
+}
+
+/* Trip footer specific button */
+.trip-footer .link-button {
+  font-size: 0.813rem;
+  padding: 0.375rem 0.875rem;
+  background-color: transparent;
+  border: none;
+  color: #4096ff;
+}
+
+.trip-footer .link-button:hover {
+  background-color: #f0f7ff;
+  color: #4096ff;
+  border: 1px solid #4096ff;
+}

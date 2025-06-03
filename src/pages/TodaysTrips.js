@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import "../styles/TodaysTrips.css";
 
 const orders = [
@@ -187,6 +188,8 @@ function ConfirmationDialog({ isOpen, title, message, onConfirm, onCancel }) {
 export default function TodaysTrips() {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get("order");
   const [orders, setOrders] = useState([
     {
       id: 1,
@@ -465,6 +468,16 @@ export default function TodaysTrips() {
         return null;
     }
   };
+
+  useEffect(() => {
+    // If there's an order ID in the URL, expand that order
+    if (orderId) {
+      const orderIdNum = parseInt(orderId);
+      if (!isNaN(orderIdNum)) {
+        setExpandedOrder(orderIdNum);
+      }
+    }
+  }, [orderId]);
 
   return (
     <div className="dashboard-container">
