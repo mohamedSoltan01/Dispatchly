@@ -76,6 +76,15 @@ const getStoredProducts = () => {
   }
 };
 
+// Add this helper function at the top level
+const formatDimensions = (dimensions) => {
+  if (typeof dimensions === "string") return dimensions;
+  if (typeof dimensions === "object" && dimensions !== null) {
+    return `${dimensions.length}x${dimensions.width}x${dimensions.height}`;
+  }
+  return "";
+};
+
 function Products({ onProductSelect, isSelectionMode = false }) {
   // State management
   const [products, setProducts] = useState(() => getStoredProducts());
@@ -416,7 +425,7 @@ function Products({ onProductSelect, isSelectionMode = false }) {
                 >
                   <TableCell>{product.id}</TableCell>
                   <TableCell>{product.skuName}</TableCell>
-                  <TableCell>{product.dimensions}</TableCell>
+                  <TableCell>{formatDimensions(product.dimensions)}</TableCell>
                   <TableCell>{product.weight}</TableCell>
                   <TableCell>{product.temperature}</TableCell>
                   <TableCell>{product.numberOfBoxes}</TableCell>
