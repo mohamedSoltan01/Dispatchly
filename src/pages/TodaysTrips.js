@@ -728,14 +728,6 @@ export default function TodaysTrips() {
                     ? "Available"
                     : "Standby"}
                 </div>
-
-                <div className="vehicle-image">
-                  <img
-                    src="/delivery-van.png"
-                    alt="Delivery Truck"
-                    className="vehicle-img"
-                  />
-                </div>
               </div>
             </div>
           </div>
