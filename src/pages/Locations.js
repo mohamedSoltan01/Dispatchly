@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -24,6 +24,13 @@ import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import "../styles/Locations.css";
+import {
+  GoogleMap,
+  LoadScript,
+  Marker,
+  InfoWindow,
+  MarkerClusterer,
+} from "@react-google-maps/api";
 
 // Mock data for locations
 const mockLocations = [
@@ -173,8 +180,8 @@ const LocationDetails = ({ location, onClose }) => {
   );
 };
 
-// New LocationForm component
-const LocationForm = ({ onClose, onSave }) => {
+// Update the LocationForm component layout
+const LocationForm = ({ onClose, onSave, existingLocations = [] }) => {
   const [formData, setFormData] = useState({
     name: "",
     city: "",
@@ -183,6 +190,15 @@ const LocationForm = ({ onClose, onSave }) => {
     longitude: "",
     category: "warehouse",
   });
+  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
+  const [geocoder, setGeocoder] = useState(null);
+
+  // Initialize geocoder when map loads
+  useEffect(() => {
+    if (window.google && window.google.maps) {
+      setGeocoder(new window.google.maps.Geocoder());
+    }
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -191,6 +207,61 @@ const LocationForm = ({ onClose, onSave }) => {
       [name]: value,
     }));
   };
+
+  const handleMapClick = useCallback(
+    async (event) => {
+      if (!geocoder) return;
+
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+
+      try {
+        // Get address details from coordinates
+        const response = await geocoder.geocode({ location: { lat, lng } });
+        if (response.results && response.results[0]) {
+          const result = response.results[0];
+          const addressComponents = result.address_components;
+
+          // Extract city and address
+          let city = "";
+          let address = result.formatted_address;
+
+          for (const component of addressComponents) {
+            if (component.types.includes("locality")) {
+              city = component.long_name;
+            }
+          }
+
+          // Update form with new location data
+          setFormData((prev) => ({
+            ...prev,
+            latitude: lat.toString(),
+            longitude: lng.toString(),
+            city: city || prev.city,
+            address: address || prev.address,
+          }));
+
+          setSelectedMapLocation({ lat, lng });
+        }
+      } catch (error) {
+        console.error("Error getting address details:", error);
+      }
+    },
+    [geocoder]
+  );
+
+  const handleExistingLocationClick = useCallback((location) => {
+    const coordinates = getMockCoordinates(location.city);
+    setFormData({
+      name: location.name,
+      city: location.city,
+      address: location.address,
+      latitude: coordinates.lat.toString(),
+      longitude: coordinates.lng.toString(),
+      category: location.category,
+    });
+    setSelectedMapLocation(coordinates);
+  }, []);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -204,92 +275,353 @@ const LocationForm = ({ onClose, onSave }) => {
   };
 
   return (
-    <div className="location-form-container">
+    <div className="location-form-full-container">
       <div className="form-header">
         <Typography variant="h6">Add New Location</Typography>
         <IconButton onClick={onClose} size="small" color="success">
           <CloseIcon />
         </IconButton>
       </div>
-      <form onSubmit={handleSubmit} className="location-form">
-        <TextField
-          fullWidth
-          label="Location Name"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="City"
-          name="city"
-          value={formData.city}
-          onChange={handleChange}
-          required
-          margin="normal"
-        />
-        <TextField
-          fullWidth
-          label="Address"
-          name="address"
-          value={formData.address}
-          onChange={handleChange}
-          required
-          margin="normal"
-          multiline
-          rows={2}
-        />
-        <Grid container spacing={2} margin="normal">
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Latitude"
-              name="latitude"
-              value={formData.latitude}
-              onChange={handleChange}
-              required
-              type="number"
-              inputProps={{ step: "any" }}
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <TextField
-              fullWidth
-              label="Longitude"
-              name="longitude"
-              value={formData.longitude}
-              onChange={handleChange}
-              required
-              type="number"
-              inputProps={{ step: "any" }}
-            />
-          </Grid>
-        </Grid>
-        <TextField
-          fullWidth
-          select
-          label="Category"
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          required
-          margin="normal"
-        >
-          <MenuItem value="warehouse">Warehouse</MenuItem>
-          <MenuItem value="market">Market</MenuItem>
-        </TextField>
-        <div className="form-actions">
-          <Button variant="outlined" onClick={onClose} color="success">
-            Cancel
-          </Button>
-          <Button type="submit" variant="contained" color="success">
-            Save Location
-          </Button>
+      <div className="location-form-content">
+        <div className="location-form-map">
+          <Map
+            locations={existingLocations}
+            height="100%"
+            onMapClick={handleMapClick}
+            onLocationClick={handleExistingLocationClick}
+            selectedLocation={selectedMapLocation}
+            isFormMap={true}
+          />
         </div>
-      </form>
+        <div className="location-form-fields">
+          <form onSubmit={handleSubmit} className="location-form">
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Location Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  required
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  required
+                  margin="normal"
+                  multiline
+                  rows={2}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Latitude"
+                  name="latitude"
+                  value={formData.latitude}
+                  onChange={handleChange}
+                  required
+                  type="number"
+                  inputProps={{ step: "any" }}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Longitude"
+                  name="longitude"
+                  value={formData.longitude}
+                  onChange={handleChange}
+                  required
+                  type="number"
+                  inputProps={{ step: "any" }}
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  required
+                  margin="normal"
+                >
+                  <MenuItem value="warehouse">Warehouse</MenuItem>
+                  <MenuItem value="market">Market</MenuItem>
+                </TextField>
+              </Grid>
+            </Grid>
+            <div className="form-actions">
+              <Button variant="outlined" onClick={onClose} color="success">
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained" color="success">
+                Save Location
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
+  );
+};
+
+// Map component
+const Map = ({
+  locations,
+  selectedLocation,
+  onLocationSelect,
+  onMapClick,
+  height = "300px",
+  isFormMap = false,
+}) => {
+  const [map, setMap] = useState(null);
+  const [infoWindow, setInfoWindow] = useState(null);
+  const [activeMarker, setActiveMarker] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [bounds, setBounds] = useState(null);
+  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
+
+  // Add debugging
+  useEffect(() => {
+    console.log("Locations to display:", locations);
+  }, [locations]);
+
+  const mapContainerStyle = {
+    width: "100%",
+    height: height,
+    borderRadius: "8px",
+  };
+
+  const defaultCenter = {
+    lat: 30.0444, // Cairo coordinates as default
+    lng: 31.2357,
+  };
+
+  const onMapLoad = useCallback(
+    (map) => {
+      setMap(map);
+      setIsLoaded(true);
+
+      // Fit map to show all markers
+      if (locations && locations.length > 0) {
+        const bounds = new window.google.maps.LatLngBounds();
+        locations.forEach((location) => {
+          const coordinates = getMockCoordinates(location.city);
+          bounds.extend(coordinates);
+        });
+        map.fitBounds(bounds);
+        setBounds(bounds);
+      }
+    },
+    [locations]
+  );
+
+  const onMarkerClick = useCallback(
+    (location) => {
+      if (infoWindow) {
+        infoWindow.close();
+      }
+      setActiveMarker(location.id);
+      if (onLocationSelect) {
+        onLocationSelect(location);
+      }
+    },
+    [infoWindow, onLocationSelect]
+  );
+
+  const onInfoWindowLoad = useCallback((infoWindow) => {
+    setInfoWindow(infoWindow);
+  }, []);
+
+  const getMarkerIcon = (category) => {
+    if (!isLoaded || !window.google) return null;
+
+    return {
+      url:
+        category === "warehouse"
+          ? "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+          : "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+      scaledSize: new window.google.maps.Size(32, 32),
+    };
+  };
+
+  const createClusterCustomIcon = (cluster) => {
+    return {
+      url: `https://maps.google.com/mapfiles/ms/icons/red-dot.png`,
+      text: cluster.getText(),
+      textColor: "#FFFFFF",
+      textSize: 12,
+      width: 40,
+      height: 40,
+    };
+  };
+
+  const handleMapClick = useCallback(
+    (event) => {
+      if (onMapClick) {
+        onMapClick(event);
+      }
+    },
+    [onMapClick]
+  );
+
+  if (!process.env.REACT_APP_GOOGLE_MAPS_API_KEY) {
+    console.error("Google Maps API key is missing from environment variables");
+    return (
+      <div style={mapContainerStyle} className="map-placeholder">
+        <Typography variant="h6" className="map-placeholder-text">
+          Google Maps API key is missing. Please check your .env file.
+        </Typography>
+      </div>
+    );
+  }
+
+  return (
+    <LoadScript
+      googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY}
+      onLoad={() => setIsLoaded(true)}
+    >
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        zoom={10}
+        center={defaultCenter}
+        onLoad={onMapLoad}
+        onClick={isFormMap ? handleMapClick : undefined}
+        options={{
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+          disableDefaultUI: true,
+          zoomControl: true,
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+        }}
+      >
+        {isLoaded && locations && locations.length > 0 && (
+          <MarkerClusterer
+            options={{
+              imagePath:
+                "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m",
+              minimumClusterSize: 2,
+              gridSize: 50,
+              styles: [
+                {
+                  url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                  height: 40,
+                  width: 40,
+                  textColor: "#FFFFFF",
+                  textSize: 12,
+                },
+              ],
+            }}
+          >
+            {(clusterer) => (
+              <>
+                {locations.map((location) => {
+                  const coordinates = getMockCoordinates(location.city);
+                  return (
+                    <Marker
+                      key={location.id}
+                      position={coordinates}
+                      onClick={() =>
+                        onLocationSelect && onLocationSelect(location)
+                      }
+                      icon={getMarkerIcon(location.category)}
+                      clusterer={clusterer}
+                    >
+                      {activeMarker === location.id && (
+                        <InfoWindow
+                          onLoad={onInfoWindowLoad}
+                          position={coordinates}
+                          onCloseClick={() => setActiveMarker(null)}
+                        >
+                          <div style={{ padding: "8px", maxWidth: "200px" }}>
+                            <h3
+                              style={{
+                                margin: "0 0 8px 0",
+                                fontSize: "16px",
+                                color: "#1a1a1a",
+                              }}
+                            >
+                              {location.name}
+                            </h3>
+                            <p
+                              style={{
+                                margin: "0",
+                                fontSize: "14px",
+                                color: "#4a4a4a",
+                              }}
+                            >
+                              {location.address}
+                            </p>
+                            <p
+                              style={{
+                                margin: "4px 0 0 0",
+                                fontSize: "12px",
+                                color: "#666",
+                              }}
+                            >
+                              {location.category.charAt(0).toUpperCase() +
+                                location.category.slice(1)}
+                            </p>
+                            <p
+                              style={{
+                                margin: "4px 0 0 0",
+                                fontSize: "12px",
+                                color: "#666",
+                              }}
+                            >
+                              {location.city}
+                            </p>
+                          </div>
+                        </InfoWindow>
+                      )}
+                    </Marker>
+                  );
+                })}
+              </>
+            )}
+          </MarkerClusterer>
+        )}
+        {selectedMapLocation && (
+          <Marker
+            position={selectedMapLocation}
+            icon={{
+              url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+              scaledSize: new window.google.maps.Size(32, 32),
+            }}
+          />
+        )}
+      </GoogleMap>
+    </LoadScript>
   );
 };
 
@@ -393,14 +725,17 @@ export default function Locations() {
             />
           </div>
 
-          {/* Map Section */}
-          <Card className="map-card">
-            <div className="map-placeholder">
-              <Typography variant="h6" className="map-placeholder-text">
-                Map View Coming Soon
-              </Typography>
-            </div>
-          </Card>
+          {/* Map Section - Only show when not in form mode */}
+          {!showNewLocationForm && (
+            <Card className="map-card">
+              <Map
+                locations={locations}
+                selectedLocation={selectedLocation}
+                onLocationSelect={handleLocationClick}
+                height="400px"
+              />
+            </Card>
+          )}
 
           {/* Locations Table */}
           <TableContainer component={Paper} className="locations-table">
@@ -463,20 +798,12 @@ export default function Locations() {
           </div>
         </>
       ) : (
-        <div className="new-location-layout">
-          <div className="map-section">
-            <Card className="map-card">
-              <div className="map-placeholder">
-                <Typography variant="h6" className="map-placeholder-text">
-                  Map View Coming Soon
-                </Typography>
-              </div>
-            </Card>
-          </div>
+        <div className="full-width-container">
           {showNewLocationForm ? (
             <LocationForm
               onClose={() => setShowNewLocationForm(false)}
               onSave={handleSaveLocation}
+              existingLocations={locations}
             />
           ) : (
             <LocationDetails
