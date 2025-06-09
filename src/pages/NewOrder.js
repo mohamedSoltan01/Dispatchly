@@ -17,6 +17,16 @@ import {
 import { useNavigate } from "react-router-dom";
 import { addNotification } from "../utils/notifications";
 
+// Add helper function at the top of the file
+const formatDimensions = (dimensions) => {
+  if (!dimensions) return "";
+  if (typeof dimensions === "string") return dimensions;
+  if (typeof dimensions === "object") {
+    return `${dimensions.length}x${dimensions.width}x${dimensions.height}`;
+  }
+  return "";
+};
+
 export default function NewOrder({ selectedProducts, onClearProducts }) {
   const navigate = useNavigate();
   const [selectedType, setSelectedType] = useState(() => {
@@ -410,26 +420,25 @@ function ProductCard({ product, index, onQuantityChange, onRemove }) {
       <h3>PRODUCT {index + 1}</h3>
       <div className="product-details">
         <p>
-          <strong>SKU:</strong> {product.sku}
+          <strong>SKU:</strong> {product.skuName || product.sku}
         </p>
         <p>
-          <strong>Dimensions:</strong> {product.length}x{product.width}x
-          {product.height}
+          <strong>Dimensions:</strong> {formatDimensions(product.dimensions)}
         </p>
         <p>
           <strong>Weight:</strong> {product.weight}
         </p>
-        {product.minMaxTemp && (
+        {product.temperature && product.temperature !== "N/A" && (
           <p>
-            <strong>Temperature Range:</strong> {product.minTemp}°C to{" "}
-            {product.maxTemp}°C
+            <strong>Temperature Range:</strong> {product.temperature}
           </p>
         )}
         <p>
           <strong>Box Type:</strong> {product.boxType}
         </p>
         <p>
-          <strong>Location:</strong> {product.location}
+          <strong>Location:</strong>{" "}
+          {product.currentLocation || product.location}
         </p>
         <p>
           <strong>Category:</strong> {product.category}
@@ -1033,8 +1042,7 @@ function OrderForm({
                   </p>
                   <p>
                     <strong>Dimensions:</strong>{" "}
-                    {product.dimensions ||
-                      `${product.length}x${product.width}x${product.height}`}
+                    {formatDimensions(product.dimensions)}
                   </p>
                   <p>
                     <strong>Weight:</strong> {product.weight} kg

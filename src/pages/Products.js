@@ -78,8 +78,9 @@ const getStoredProducts = () => {
 
 // Add this helper function at the top level
 const formatDimensions = (dimensions) => {
+  if (!dimensions) return "";
   if (typeof dimensions === "string") return dimensions;
-  if (typeof dimensions === "object" && dimensions !== null) {
+  if (typeof dimensions === "object") {
     return `${dimensions.length}x${dimensions.width}x${dimensions.height}`;
   }
   return "";
@@ -162,16 +163,15 @@ function Products({ onProductSelect, isSelectionMode = false }) {
       id: `PRD${Math.floor(Math.random() * 1000)
         .toString()
         .padStart(3, "0")}`,
-      sku: newProduct.sku,
-      dimensions: {
-        length: newProduct.length,
-        width: newProduct.width,
-        height: newProduct.height,
-      },
+      skuName: newProduct.sku,
+      dimensions: `${newProduct.length}x${newProduct.width}x${newProduct.height}`,
       weight: newProduct.weight,
-      temperature: newProduct.temperature,
+      numberOfBoxes: Number(newProduct.numberOfBoxes),
+      temperature: newProduct.minMaxTemp
+        ? `${newProduct.minTemp}°C - ${newProduct.maxTemp}°C`
+        : "N/A",
       boxType: newProduct.boxType,
-      location: newProduct.location,
+      currentLocation: newProduct.location,
       category: newProduct.category,
       createdAt: new Date().toISOString(),
     };
@@ -204,25 +204,59 @@ function Products({ onProductSelect, isSelectionMode = false }) {
   };
 
   const handleEditClick = (product) => {
+    if (!product) return; // Guard against null/undefined product
+
     setSelectedProduct(product);
+
+    // Handle dimensions based on their format
+    let length = "",
+      width = "",
+      height = "";
+    if (product.dimensions) {
+      if (typeof product.dimensions === "string") {
+        // Handle string format (e.g., "10x20x30")
+        const dims = product.dimensions.split("x");
+        if (dims.length === 3) {
+          [length, width, height] = dims;
+        }
+      } else if (typeof product.dimensions === "object") {
+        // Handle object format (e.g., { length: "10", width: "20", height: "30" })
+        length = product.dimensions.length || "";
+        width = product.dimensions.width || "";
+        height = product.dimensions.height || "";
+      }
+    }
+
+    // Safely handle temperature parsing
+    let minTemp = "",
+      maxTemp = "";
+    const hasTemperature = product.temperature && product.temperature !== "N/A";
+    if (hasTemperature) {
+      try {
+        const tempParts = product.temperature.split("-");
+        if (tempParts.length === 2) {
+          minTemp = tempParts[0].replace("°C", "").trim();
+          maxTemp = tempParts[1].replace("°C", "").trim();
+        }
+      } catch (error) {
+        console.error("Error parsing temperature:", error);
+      }
+    }
+
     setEditingProduct({
-      id: product.id,
-      sku: product.skuName,
-      length: product.dimensions.split("x")[0],
-      width: product.dimensions.split("x")[1],
-      height: product.dimensions.split("x")[2],
-      weight: product.weight,
-      minMaxTemp: product.temperature !== "N/A",
-      minTemp:
-        product.temperature !== "N/A" ? product.temperature.split("-")[0] : "",
-      maxTemp:
-        product.temperature !== "N/A"
-          ? product.temperature.split("-")[1].replace("°C", "")
-          : "",
-      boxType: product.boxType,
-      location: product.currentLocation,
-      category: product.category,
-      numberOfBoxes: product.numberOfBoxes,
+      id: product.id || "",
+      sku: product.skuName || product.sku || "",
+      length,
+      width,
+      height,
+      weight: product.weight || "",
+      minMaxTemp: hasTemperature,
+      minTemp,
+      maxTemp,
+      boxType: product.boxType || "",
+      location: product.currentLocation || product.location || "",
+      category: product.category || "",
+      numberOfBoxes: product.numberOfBoxes || 1,
     });
     setIsEditing(true);
     handleActionMenuClose();
@@ -498,6 +532,7 @@ function NewProductCard({ onCancel, onProductAdded }) {
     width: "",
     height: "",
     weight: "",
+    numberOfBoxes: "1",
     minMaxTemp: false,
     minTemp: "",
     maxTemp: "",
@@ -506,9 +541,24 @@ function NewProductCard({ onCancel, onProductAdded }) {
     category: "",
   });
   const [tempError, setTempError] = useState("");
+  const [boxesError, setBoxesError] = useState("");
 
   const handleInputChange = (e) => {
     const { id, value, type, checked } = e.target;
+
+    if (id === "numberOfBoxes") {
+      const numValue = value === "" ? "" : Number(value);
+      if (numValue === "" || numValue >= 1) {
+        setFormData((prev) => ({
+          ...prev,
+          [id]: value,
+        }));
+        setBoxesError("");
+      } else {
+        setBoxesError("Number of boxes must be at least 1");
+      }
+      return;
+    }
 
     if (id === "minTemp" || id === "maxTemp") {
       const newValue = value === "" ? "" : Number(value);
@@ -562,6 +612,13 @@ function NewProductCard({ onCancel, onProductAdded }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Validate number of boxes
+    const numBoxes = Number(formData.numberOfBoxes);
+    if (!numBoxes || numBoxes < 1) {
+      setBoxesError("Number of boxes must be at least 1");
+      return;
+    }
+
     // Final validation before submit
     if (formData.minMaxTemp) {
       const minTemp = Number(formData.minTemp);
@@ -575,11 +632,20 @@ function NewProductCard({ onCancel, onProductAdded }) {
       }
     }
 
-    if (tempError) {
+    if (tempError || boxesError) {
       return;
     }
 
-    onProductAdded(formData);
+    // Format temperature based on whether min/max temp is enabled
+    const temperature = formData.minMaxTemp
+      ? `${formData.minTemp}°C - ${formData.maxTemp}°C`
+      : "N/A";
+
+    onProductAdded({
+      ...formData,
+      temperature,
+      numberOfBoxes: Number(formData.numberOfBoxes),
+    });
   };
 
   const handleCancel = () => {
@@ -589,6 +655,7 @@ function NewProductCard({ onCancel, onProductAdded }) {
       width: "",
       height: "",
       weight: "",
+      numberOfBoxes: "1",
       minMaxTemp: false,
       minTemp: "",
       maxTemp: "",
@@ -596,6 +663,7 @@ function NewProductCard({ onCancel, onProductAdded }) {
       location: "",
       category: "",
     });
+    setBoxesError("");
     onCancel();
   };
 
@@ -664,6 +732,24 @@ function NewProductCard({ onCancel, onProductAdded }) {
             onChange={handleInputChange}
             required
           />
+        </div>
+
+        <div className="add-new-product-form-group">
+          <label htmlFor="numberOfBoxes" className="product-label">
+            Number of Boxes
+          </label>
+          <input
+            id="numberOfBoxes"
+            type="number"
+            className={`product-input-field ${boxesError ? "error" : ""}`}
+            value={formData.numberOfBoxes}
+            onChange={handleInputChange}
+            required
+            min="1"
+            step="1"
+            placeholder="Enter number of boxes"
+          />
+          {boxesError && <div className="error-message">{boxesError}</div>}
         </div>
 
         <div className="add-new-product-form-group">

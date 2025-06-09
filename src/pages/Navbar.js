@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Navbar.css";
 import { colors, typography, spacing } from "../styles/designSystem";
@@ -7,9 +7,11 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from "@mui/icons-material/Menu";
 import { IconButton, Badge, Menu, MenuItem, Avatar } from "@mui/material";
 import { useNotificationCount } from "../hooks/useNotificationCount";
+import { AuthContext } from "../App";
 
 export default function Navbar({ toggleSidebar }) {
   const navigate = useNavigate();
+  const { user, logout } = useContext(AuthContext);
   const [anchorEl, setAnchorEl] = useState(null);
   const unreadCount = useNotificationCount();
 
@@ -28,8 +30,8 @@ export default function Navbar({ toggleSidebar }) {
 
   const handleSignOut = () => {
     handleMenuClose();
-    // Add sign out logic here
-    console.log("Signing out...");
+    logout();
+    navigate("/signin");
   };
 
   const handleNotificationsClick = () => {
@@ -96,7 +98,7 @@ export default function Navbar({ toggleSidebar }) {
               backgroundColor: colors.primary.main,
             }}
           >
-            <AccountCircleIcon />
+            {user?.name?.charAt(0) || <AccountCircleIcon />}
           </Avatar>
         </IconButton>
 

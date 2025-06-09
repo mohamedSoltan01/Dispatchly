@@ -4,10 +4,12 @@ import {
   Route,
   useLocation,
   useNavigate,
+  Navigate,
 } from "react-router-dom";
 import "./App.css";
 import Sidebar from "./Sidebar";
 import Navbar from "./pages/Navbar";
+import SignIn from "./pages/SignIn";
 import Dashboard from "./pages/Dashboard";
 import NewOrder from "./pages/NewOrder";
 import TripHistory from "./pages/TripHistory";
@@ -20,13 +22,100 @@ import Products from "./pages/Products";
 import Cars from "./pages/Cars";
 import Account from "./pages/Account";
 import Notifications from "./pages/notifications";
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  createContext,
+  useContext,
+} from "react";
+import { hasAccess } from "./SidebarData";
+
+// Create Auth Context
+export const AuthContext = createContext(null);
+
+// Auth Provider Component
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const login = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const { user } = useContext(AuthContext);
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/signin" state={{ from: location }} replace />;
+  }
+
+  // Special case for account page - all authenticated users should have access
+  if (location.pathname === "/account") {
+    return children;
+  }
+
+  // Check if user has access to the current route
+  if (!hasAccess(user.role.toLowerCase(), location.pathname)) {
+    // Redirect to first accessible route if user doesn't have access
+    return <Navigate to={getFirstAccessibleRoute(user)} replace />;
+  }
+
+  return children;
+}
+
+// Helper function to get the first accessible route for a user
+const getFirstAccessibleRoute = (user) => {
+  if (!user || !user.role) return "/signin";
+
+  // Define the order of routes to check
+  const routeOrder = [
+    "/dashboard",
+    "/trip-history",
+    "/new-order",
+    "/locations",
+    "/products",
+    "/dispatch-order",
+    "/todays-trips",
+    "/users",
+    "/organizations",
+    "/cars",
+  ];
+
+  // Find the first route the user has access to
+  for (const route of routeOrder) {
+    if (hasAccess(user.role, route)) {
+      return route;
+    }
+  }
+
+  return "/signin"; // Fallback to signin if no accessible routes found
+};
 
 // New AppContent component that contains the routing logic
 function AppContent() {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const isSelectionMode = location.search.includes("mode=select");
   const isNewOrderPath = location.pathname.includes("/new-order");
   const cleanupInProgress = useRef(false);
@@ -141,56 +230,164 @@ function AppContent() {
 
   return (
     <div className="App">
-      <Sidebar />
-      <div className="container">
-        <Navbar />
+      {user && <Sidebar />}
+      <div className={`container ${!user ? "auth-container" : ""}`}>
+        {user && <Navbar />}
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/trip-history" element={<TripHistory />} />
           <Route
-            path="/new-order"
+            path="/signin"
             element={
-              <NewOrder
-                key={location.pathname + location.search}
-                selectedProducts={selectedProducts}
-                onClearProducts={clearSelectedProducts}
-              />
-            }
-          />
-          <Route path="/dispatch-order" element={<DispatchOrder />} />
-          <Route path="/todays-trips" element={<TodaysTrips />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/organizations" element={<Organizations />} />
-          <Route path="/locations" element={<Locations />} />
-          <Route
-            path="/products"
-            element={
-              isSelectionMode ? (
-                <Products
-                  key="selection-mode"
-                  isSelectionMode={true}
-                  onProductSelect={handleProductSelect}
-                />
+              user ? (
+                <Navigate to={getFirstAccessibleRoute(user)} replace />
               ) : (
-                <Products key="normal-mode" />
+                <SignIn />
               )
             }
           />
-          <Route path="/cars" element={<Cars />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/notifications" element={<Notifications />} />
+
+          <Route
+            path="/"
+            element={
+              user ? (
+                <Navigate to={getFirstAccessibleRoute(user)} replace />
+              ) : (
+                <Navigate to="/signin" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trip-history"
+            element={
+              <ProtectedRoute>
+                <TripHistory />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/new-order"
+            element={
+              <ProtectedRoute>
+                <NewOrder
+                  key={location.pathname + location.search}
+                  selectedProducts={selectedProducts}
+                  onClearProducts={clearSelectedProducts}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dispatch-order"
+            element={
+              <ProtectedRoute>
+                <DispatchOrder />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/todays-trips"
+            element={
+              <ProtectedRoute>
+                <TodaysTrips />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Users />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/organizations"
+            element={
+              <ProtectedRoute>
+                <Organizations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/locations"
+            element={
+              <ProtectedRoute>
+                <Locations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoute>
+                {isSelectionMode ? (
+                  <Products
+                    key="selection-mode"
+                    isSelectionMode={true}
+                    onProductSelect={handleProductSelect}
+                  />
+                ) : (
+                  <Products key="normal-mode" />
+                )}
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/cars"
+            element={
+              <ProtectedRoute>
+                <Cars />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <Account />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
     </div>
   );
 }
 
-// Main App component that wraps AppContent with Router
+// Main App component that wraps AppContent with Router and AuthProvider
 export default function App() {
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }

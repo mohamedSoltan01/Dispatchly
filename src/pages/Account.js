@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   Avatar,
   Button,
@@ -16,43 +16,45 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import "../styles/Account.css";
+import { AuthContext } from "../App";
 
 export default function Account() {
+  const { user } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@dispatchly.com",
-    phones: ["+1 (555) 123-4567"],
-    country: "United States",
-    state: "New York",
-    city: "New York City",
-    postalCode: "10001",
-    streetAddress: "123 Main Street",
+    firstName: user?.name?.split(" ")[0] || "",
+    lastName: user?.name?.split(" ").slice(1).join(" ") || "",
+    email: user?.email || "",
+    jobTitle: user?.jobTitle || "",
+    role: user?.role || "",
+    phone: "", // Not in user data
+    organization: "", // Not in user data
+    department: "", // Not in user data
+    location: "", // Not in user data
   });
 
-  const handleEdit = () => {
+  const handleEditClick = () => {
     setIsEditing(true);
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    // Reset form data to original values
+  const handleCancelClick = () => {
+    // Reset form data to original user data
     setFormData({
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@dispatchly.com",
-      phones: ["+1 (555) 123-4567"],
-      country: "United States",
-      state: "New York",
-      city: "New York City",
-      postalCode: "10001",
-      streetAddress: "123 Main Street",
+      firstName: user?.name?.split(" ")[0] || "",
+      lastName: user?.name?.split(" ").slice(1).join(" ") || "",
+      email: user?.email || "",
+      jobTitle: user?.jobTitle || "",
+      role: user?.role || "",
+      phone: "",
+      organization: "",
+      department: "",
+      location: "",
     });
+    setIsEditing(false);
   };
 
-  const handleSave = () => {
-    // Here you would typically make an API call to update the user's information
+  const handleSaveClick = () => {
+    // Here you would typically make an API call to update the user data
     setIsEditing(false);
   };
 
@@ -87,6 +89,12 @@ export default function Account() {
     }));
   };
 
+  // Format role for display
+  const formatRole = (role) => {
+    if (!role) return "";
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
   return (
     <div className="account-container">
       <div className="account-header">
@@ -97,7 +105,7 @@ export default function Account() {
           <Button
             variant="outlined"
             startIcon={<EditIcon />}
-            onClick={handleEdit}
+            onClick={handleEditClick}
             className="edit-button"
           >
             Edit Profile
@@ -108,7 +116,7 @@ export default function Account() {
               variant="outlined"
               color="error"
               startIcon={<CancelIcon />}
-              onClick={handleCancel}
+              onClick={handleCancelClick}
               className="cancel-button"
             >
               Cancel
@@ -117,7 +125,7 @@ export default function Account() {
               variant="contained"
               color="primary"
               startIcon={<SaveIcon />}
-              onClick={handleSave}
+              onClick={handleSaveClick}
               className="save-button"
             >
               Save Changes
@@ -145,10 +153,13 @@ export default function Account() {
           </Avatar>
           <div className="profile-info">
             <Typography variant="h4" className="profile-name">
-              {formData.firstName} {formData.lastName}
+              {user?.name || "User Name"}
             </Typography>
             <Typography variant="h6" className="profile-title">
-              Senior Operations Manager
+              {user?.jobTitle || "Job Title"}
+            </Typography>
+            <Typography variant="body1" className="profile-role">
+              {formatRole(user?.role)}
             </Typography>
           </div>
         </div>
@@ -197,114 +208,85 @@ export default function Account() {
                 className="profile-field"
               />
             </Grid>
-            <Grid item xs={12}>
-              <div className="phones-section">
-                <Typography variant="subtitle1" className="phones-title">
-                  Phone Numbers
-                </Typography>
-                <Grid container spacing={2} className="phones-grid">
-                  {formData.phones.map((phone, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
-                      <div className="phone-input-group">
-                        <TextField
-                          fullWidth
-                          label={`Phone Number ${index + 1}`}
-                          value={phone}
-                          onChange={(e) =>
-                            handlePhoneChange(index, e.target.value)
-                          }
-                          disabled={!isEditing}
-                          className="profile-field"
-                        />
-                        {isEditing && formData.phones.length > 1 && (
-                          <IconButton
-                            onClick={() => removePhoneNumber(index)}
-                            className="remove-phone-button"
-                            size="small"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        )}
-                      </div>
-                    </Grid>
-                  ))}
-                </Grid>
-                {isEditing && (
-                  <Button
-                    startIcon={<AddIcon />}
-                    onClick={addPhoneNumber}
-                    className="add-phone-button"
-                  >
-                    Add Phone Number
-                  </Button>
-                )}
-              </div>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="profile-field"
+                placeholder="Not provided"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Job Title"
+                name="jobTitle"
+                value={formData.jobTitle}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="profile-field"
+              />
             </Grid>
           </Grid>
         </div>
       </Paper>
 
-      {/* Address Container */}
+      {/* Additional Information Container */}
       <Paper className="account-section">
         <div className="section-header">
           <Typography variant="h6" className="section-title">
-            Address Information
+            Additional Information
           </Typography>
         </div>
         <div className="section-content">
           <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Organization"
+                name="organization"
+                value={formData.organization}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="profile-field"
+                placeholder="Not provided"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Department"
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="profile-field"
+                placeholder="Not provided"
+              />
+            </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Street Address"
-                name="streetAddress"
-                value={formData.streetAddress}
+                label="Location"
+                name="location"
+                value={formData.location}
                 onChange={handleInputChange}
                 disabled={!isEditing}
                 className="profile-field"
+                placeholder="Not provided"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Country"
-                name="country"
-                value={formData.country}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="State/Province"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="City"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Postal Code"
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleInputChange}
-                disabled={!isEditing}
+                label="Role"
+                name="role"
+                value={formatRole(formData.role)}
+                disabled={true}
                 className="profile-field"
               />
             </Grid>
