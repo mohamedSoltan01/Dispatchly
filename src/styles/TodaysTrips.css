@@ -80,7 +80,12 @@ body {
 }
 
 .order-card.expanded {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: #e0f2fe !important; /* Soft blue highlight */
+  border: 2px solid #38bdf8 !important;
+  box-shadow: 0 4px 24px rgba(56,189,248,0.10);
+  transition: background 0.2s, border 0.2s, box-shadow 0.2s;
+  position: relative;
+  z-index: 2;
 }
 
 .order-header {
@@ -639,4 +644,84 @@ body {
 .confirm-dialog-button:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+/* Loading state styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error state styles */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.retry-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background-color: #2980b9;
+}
+
+.trip-expanded-details select {
+  margin-left: 10px;
+  padding: 6px 18px 6px 10px;
+  border-radius: 20px;
+  border: 1.5px solid #38bdf8;
+  background: #f0f9ff;
+  font-size: 1em;
+  color: #0369a1;
+  font-weight: 600;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(56,189,248,0.07);
+  appearance: none;
+  cursor: pointer;
+}
+
+.trip-expanded-details select:focus,
+.trip-expanded-details select:hover {
+  border-color: #0ea5e9;
+  background: #e0f2fe;
+  box-shadow: 0 2px 8px rgba(56,189,248,0.13);
 }

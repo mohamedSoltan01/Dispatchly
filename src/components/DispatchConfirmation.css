@@ -1,0 +1,134 @@
+.dispatch-confirmation {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dispatch-confirmation h1 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.confirmation-controls {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.proposed-trips {
+  display: grid;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.trip-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.trip-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.trip-vehicle {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.trip-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.trip-orders h4,
+.trip-route h4 {
+  color: #333;
+  margin-bottom: 0.75rem;
+}
+
+.trip-orders ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.trip-orders li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.trip-orders li:last-child {
+  border-bottom: none;
+}
+
+.trip-route p {
+  margin: 0.5rem 0;
+  color: #666;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.confirm-button,
+.reject-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirm-button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.confirm-button:hover {
+  background: #45a049;
+}
+
+.confirm-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+.reject-button {
+  background: white;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.reject-button:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+} 

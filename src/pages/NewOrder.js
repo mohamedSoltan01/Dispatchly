@@ -16,6 +16,12 @@ import {
 } from "../styles/designSystem";
 import { useNavigate } from "react-router-dom";
 import { addNotification } from "../utils/notifications";
+import { ordersService } from "../services/orders";
+import locationService from "../services/locationService";
+import { productsService } from "../services/products";
+import { AuthContext } from "../App";
+import { useContext } from "react";
+import api from "../services/api";
 
 // Add helper function at the top of the file
 const formatDimensions = (dimensions) => {
@@ -43,6 +49,7 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
     return Boolean(type && option === "portal");
   });
   const updateInProgress = useRef(false);
+  const [excelFile, setExcelFile] = useState(null);
 
   // Cleanup function to clear all saved state
   const clearAllState = useCallback(() => {
@@ -158,6 +165,31 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
     "- Upload the file",
   ];
 
+  const handleExcelFileChange = (file) => {
+    setExcelFile(file);
+  };
+
+  const handleExcelSubmit = async () => {
+    if (!excelFile) {
+      alert("Please select a file before submitting");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", excelFile);
+
+    try {
+      const response = await api.post("/orders/import_csv", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert(`Success: ${response.data.message}`);
+      setExcelFile(null);
+      // Optionally refresh orders or show results
+    } catch (err) {
+      const msg = err.response?.data?.errors || err.response?.data?.error || err.message;
+      alert("CSV Import Error: " + (Array.isArray(msg) ? msg.join("\n") : msg));
+    }
+  };
+
   if (selectedOption === "excel") {
     return (
       <div className="container">
@@ -166,8 +198,8 @@ export default function NewOrder({ selectedProducts, onClearProducts }) {
           Back to Options
         </button>
         <ExcelUpload
-          onFileChange={(file) => console.log("File changed:", file)}
-          onSubmit={() => console.log("Submit excel")}
+          onFileChange={handleExcelFileChange}
+          onSubmit={handleExcelSubmit}
         />
       </div>
     );
@@ -449,8 +481,15 @@ function ProductCard({ product, index, onQuantityChange, onRemove }) {
             type="number"
             className="product-input"
             min="1"
+            max={product.number_of_boxes || 1}
             value={product.quantity}
-            onChange={(e) => onQuantityChange(index, e.target.value)}
+            onChange={(e) => {
+              const newValue = Math.min(
+                parseInt(e.target.value) || 1,
+                product.number_of_boxes || 1
+              );
+              onQuantityChange(index, newValue);
+            }}
           />
         </div>
       </div>
@@ -467,21 +506,9 @@ function ProductCard({ product, index, onQuantityChange, onRemove }) {
 
 // Function to generate a unique order ID
 const generateUniqueOrderId = () => {
-  // Get all existing orders from localStorage
-  const existingOrders = JSON.parse(
-    localStorage.getItem("dispatchOrders") || "[]"
-  );
-  const existingIds = new Set(existingOrders.map((order) => order.id));
-
-  // Generate a new ID and check if it exists
-  let newId;
-  do {
     // Format: FB + random 6 digits
     const randomNum = Math.floor(100000 + Math.random() * 900000);
-    newId = `FB${randomNum}`;
-  } while (existingIds.has(newId));
-
-  return newId;
+  return `FB${randomNum}`;
 };
 
 function OrderForm({
@@ -493,8 +520,8 @@ function OrderForm({
   onOrderSuccess,
 }) {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [orderId, setOrderId] = useState(() => {
-    // Generate a unique ID when the component mounts
     return generateUniqueOrderId();
   });
   const [warehouse, setWarehouse] = useState(() => {
@@ -505,7 +532,6 @@ function OrderForm({
     const saved = localStorage.getItem("orderDate");
     if (saved) return saved;
 
-    // Direct date initialization
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");
@@ -532,7 +558,30 @@ function OrderForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [errors, setErrors] = useState({});
+  const [locations, setLocations] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const updateInProgress = useRef(false);
+
+  // Fetch locations and warehouses on component mount
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const allLocations = await locationService.getAllLocations();
+        console.log('All locations:', allLocations);
+        setLocations(allLocations);
+        // Filter warehouses - check both type and location_type fields
+        const warehouseLocations = allLocations.filter(loc => 
+          loc.type === 'warehouse' || loc.location_type === 'warehouse'
+        );
+        console.log('Warehouse locations:', warehouseLocations);
+        setWarehouses(warehouseLocations);
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        setErrors(prev => ({ ...prev, locations: 'Failed to load locations' }));
+      }
+    };
+    fetchLocations();
+  }, []);
 
   // Handle selectedProducts changes
   useEffect(() => {
@@ -580,6 +629,10 @@ function OrderForm({
     try {
       const value = e.target.value;
       setWarehouse(value);
+      // Clear destination when warehouse changes
+      setDestination("");
+      localStorage.removeItem("orderDestination");
+      
       if (value) {
         localStorage.setItem("orderWarehouse", value);
       } else {
@@ -697,31 +750,6 @@ function OrderForm({
           newErrors.products = "At least one product is required";
         }
 
-        // Verify order ID is still unique before submission
-        const existingOrders = JSON.parse(
-          localStorage.getItem("dispatchOrders") || "[]"
-        );
-        if (existingOrders.some((order) => order.id === orderId)) {
-          // If ID is no longer unique, generate a new one
-          const newOrderId = generateUniqueOrderId();
-          setOrderId(newOrderId);
-          newErrors.submit =
-            "Order ID was updated. Please try submitting again.";
-          setErrors(newErrors);
-          return;
-        }
-
-        // Direct date comparison
-        if (date) {
-          const today = new Date();
-          const selectedDate = new Date(date);
-          today.setHours(0, 0, 0, 0);
-          selectedDate.setHours(0, 0, 0, 0);
-          if (selectedDate < today) {
-            newErrors.date = "Cannot select a past date";
-          }
-        }
-
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) {
           return;
@@ -735,38 +763,27 @@ function OrderForm({
           return sum + weight * product.quantity;
         }, 0);
 
-        // Create order details object with the unique ID
+        // Create order details object
         const orderDetails = {
-          id: orderId,
-          customer: "Customer Name", // Mock data until backend integration
-          departureLocation: warehouse,
-          type: type === "inbound" ? "Inbound" : "Outbound",
-          weight: `${totalWeight} kg`,
-          arrivalLocation: destination,
-          arrivalDate: date,
-          pickupTime: pickupTime,
+          order: {
+            order_number: orderId,
+            order_type: type.toLowerCase(),
+            pickup_location_id: parseInt(warehouse),
+            delivery_location_id: parseInt(destination),
+            pickup_time_window_start: `${date}T${pickupTime}:00`,
+            pickup_time_window_end: `${date}T${pickupTime}:00`,
+            delivery_deadline: `${date}T${pickupTime}:00`,
           status: "pending",
-          dispatchedAt: null,
-          products: products.map((product) => ({
-            skuName: product.skuName,
-            quantity: product.quantity,
-            productId: product.id,
-            dimensions: product.dimensions,
-            weight: product.weight,
-            temperature: product.temperature,
-            boxType: product.boxType,
-            location: product.currentLocation,
-            category: product.category,
-          })),
+            organization_id: user.organization_id
+          },
+          order_items: products.map((product) => ({
+            product_id: product.id,
+            quantity: product.quantity
+          }))
         };
 
-        // Save to dispatch orders list
-        try {
-          const existingOrders = JSON.parse(
-            localStorage.getItem("dispatchOrders") || "[]"
-          );
-          const updatedOrders = [...existingOrders, orderDetails];
-          localStorage.setItem("dispatchOrders", JSON.stringify(updatedOrders));
+        // Send to backend
+        const response = await ordersService.createOrder(orderDetails);
 
           // Add notification for new order
           addNotification("new_order", {
@@ -775,17 +792,11 @@ function OrderForm({
             weight: `${totalWeight} kg`,
             destination: destination,
           });
-        } catch (error) {
-          console.error("Error saving order to dispatch list:", error);
-        }
-
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Show thank you message
         setShowThankYou(true);
 
-        // Clear form data but don't navigate
+        // Clear form data
         onOrderSuccess();
       } catch (error) {
         console.error("Error submitting order:", error);
@@ -804,6 +815,7 @@ function OrderForm({
       type,
       orderId,
       onOrderSuccess,
+      user.organization_id
     ]
   );
 
@@ -915,8 +927,11 @@ function OrderForm({
                 onChange={handleWarehouseChange}
               >
                 <option value="">Select warehouse</option>
-                <option value="warehouse1">Warehouse 1</option>
-                <option value="warehouse2">Warehouse 2</option>
+                {warehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </option>
+                ))}
               </select>
               {errors.warehouse && (
                 <span className="error-message">{errors.warehouse}</span>
@@ -949,9 +964,10 @@ function OrderForm({
 
           <div className="form-group">
             <label>Pickup Time</label>
+            <div className="input-with-icon">
             <input
               type="time"
-              placeholder="Enter pickup time"
+                placeholder="Select time"
               className={`form-input ${errors.pickupTime ? "error" : ""}`}
               value={pickupTime}
               onChange={handlePickupTimeChange}
@@ -959,20 +975,34 @@ function OrderForm({
             {errors.pickupTime && (
               <span className="error-message">{errors.pickupTime}</span>
             )}
+            </div>
           </div>
 
-          <div className="form-group full-width">
+          <div className="form-group">
             <label>Destination</label>
-            <input
-              type="text"
-              placeholder="Enter destination"
+            <div className="select-wrapper">
+              <select
               className={`form-input ${errors.destination ? "error" : ""}`}
               value={destination}
               onChange={handleDestinationChange}
-            />
+                disabled={!warehouse}
+              >
+                <option value="">Select destination</option>
+                {locations
+                  .filter(location => {
+                    // Filter out the selected warehouse and any locations with the same ID
+                    return location.id !== parseInt(warehouse);
+                  })
+                  .map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+              </select>
             {errors.destination && (
               <span className="error-message">{errors.destination}</span>
             )}
+            </div>
           </div>
         </div>
 
@@ -1026,7 +1056,7 @@ function OrderForm({
           {products.map((product) => (
             <div key={product.id} className="product-card">
               <div className="product-card-header">
-                <h3>{product.skuName || product.name}</h3>
+                <h3>{product.sku}</h3>
                 <button
                   type="button"
                   className="remove-product-button"
@@ -1042,25 +1072,28 @@ function OrderForm({
                   </p>
                   <p>
                     <strong>Dimensions:</strong>{" "}
-                    {formatDimensions(product.dimensions)}
+                    {product.length && product.width && product.height
+                      ? `${product.length}x${product.width}x${product.height}`
+                      : "-"}
                   </p>
                   <p>
                     <strong>Weight:</strong> {product.weight} kg
                   </p>
-                  {product.temperature && (
+                  {product.storage_temperature && (
                     <p>
-                      <strong>Temperature:</strong> {product.temperature}
+                      <strong>Storage Temperature:</strong>{" "}
+                      {product.storage_temperature}
                     </p>
                   )}
+                  {product.required_temperature && (
                   <p>
-                    <strong>Box Type:</strong> {product.boxType}
+                      <strong>Required Temperature:</strong>{" "}
+                      {product.required_temperature}°C
                   </p>
+                  )}
                   <p>
-                    <strong>Location:</strong>{" "}
-                    {product.currentLocation || product.location}
-                  </p>
-                  <p>
-                    <strong>Category:</strong> {product.category}
+                    <strong>Number of Boxes:</strong>{" "}
+                    {product.number_of_boxes || 1}
                   </p>
                 </div>
                 <div className="product-quantity">
@@ -1069,12 +1102,20 @@ function OrderForm({
                     id={`quantity-${product.id}`}
                     type="number"
                     min="1"
+                    max={product.number_of_boxes || 1}
                     value={product.quantity}
-                    onChange={(e) =>
-                      handleQuantityChange(product.id, e.target.value)
-                    }
+                    onChange={(e) => {
+                      const newValue = Math.min(
+                        parseInt(e.target.value) || 1,
+                        product.number_of_boxes || 1
+                      );
+                      handleQuantityChange(product.id, newValue);
+                    }}
                     className="quantity-input"
                   />
+                  <span className="quantity-limit">
+                    (Max: {product.number_of_boxes || 1})
+                  </span>
                 </div>
               </div>
             </div>

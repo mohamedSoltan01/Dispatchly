@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,11 @@ import {
   Typography,
   Box,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
+  Alert,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -24,50 +29,40 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import "../styles/Users.css";
 import { addNotification } from "../utils/notifications";
-
-// Mock data for users
-const mockUsers = [
-  {
-    id: "USR001",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "Planning",
-    lastLogin: "2024-03-20 14:30",
-    createdAt: "2024-01-15 09:00",
-  },
-  {
-    id: "USR002",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "Dispatch",
-    lastLogin: "2024-03-20 15:45",
-    createdAt: "2024-02-01 10:30",
-  },
-];
-
-// Helper function to get users from localStorage or use initial data
-const getStoredUsers = () => {
-  try {
-    const saved = localStorage.getItem("users");
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Only set initial mock data if no users exist in localStorage
-    localStorage.setItem("users", JSON.stringify(mockUsers));
-    return mockUsers;
-  } catch (error) {
-    console.error("Error loading users from localStorage:", error);
-    return mockUsers;
-  }
-};
+import { usersService } from "../services/users";
+import { organizationsService } from "../services/organizations";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 export default function Users() {
-  const [users, setUsers] = useState(() => getStoredUsers());
+  // Get current user role from localStorage at the top
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.role;
+
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await usersService.getUsers();
+        setUsers(data);
+      } catch (err) {
+        setError("Failed to load users.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   // Handle search
   const handleSearch = useCallback((event) => {
@@ -103,42 +98,43 @@ export default function Users() {
 
   // Handle user added
   const handleUserAdded = useCallback(
-    (newUser) => {
+    async (newUser) => {
       try {
-        const userToAdd = {
-          id: `USR${String(users.length + 1).padStart(3, "0")}`,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-          lastLogin: "Never",
-          createdAt: new Date().toLocaleString(),
+        setLoading(true);
+        setError(null);
+        // Always send the payload as { user: { ...fields } }
+        const payload = {
+          user: {
+            name: newUser.name,
+            email_address: newUser.email_address,
+            password: newUser.password,
+            role: newUser.role,
+            organization_id: newUser.organization_id
+          }
         };
-
-        const updatedUsers = [...users, userToAdd];
-        setUsers(updatedUsers);
-        localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-        // Add notification for new user
-        addNotification("new_user", {
-          userName: newUser.name,
-          role: newUser.role,
-          email: newUser.email,
-        });
-
+        const response = await usersService.createUser(payload);
+        setUsers((prev) => [...prev, response]);
         setShowNewUserForm(false);
-      } catch (error) {
-        console.error("Error adding new user:", error);
+      } catch (err) {
+        setError(err.message || "Failed to add user.");
+        console.error("Error in handleUserAdded:", {
+          message: err.message,
+          error: err,
+          stack: err.stack
+        });
+      } finally {
+        setLoading(false);
       }
     },
-    [users]
+    []
   );
 
   // Filter users based on search query
   const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase())
+      (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
+      (user.email_address?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
+      (user.role?.toLowerCase().includes(searchQuery.toLowerCase()) || "")
   );
 
   // Update filterConfig for roles
@@ -150,15 +146,29 @@ export default function Users() {
     },
   ];
 
-  // Implement handleDeleteUser function
+  // Delete user via API
   const handleDeleteUser = useCallback(
-    (userId) => {
-      const updatedUsers = users.filter((user) => user.id !== userId);
-      setUsers(updatedUsers);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
+    async (userId) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await usersService.deleteUser(userId);
+        setUsers((prev) => prev.filter((user) => user.id !== userId));
+      } catch (err) {
+        setError("Failed to delete user.");
+      } finally {
+        setLoading(false);
+      }
     },
-    [users]
+    []
   );
+
+  if (loading) {
+    return <div className="users-container">Loading...</div>;
+  }
+  if (error) {
+    return <div className="users-container error-message">{error}</div>;
+  }
 
   if (showNewUserForm) {
     return (
@@ -222,6 +232,7 @@ export default function Users() {
               <TableCell>User ID</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
+              {currentUserRole === "super_admin" && <TableCell>Organization</TableCell>}
               <TableCell>Last Login</TableCell>
               <TableCell>Created At</TableCell>
               <TableCell>Role</TableCell>
@@ -237,14 +248,17 @@ export default function Users() {
                     <Typography variant="body1">{user.name}</Typography>
                   </Box>
                 </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.lastLogin}</TableCell>
-                <TableCell>{user.createdAt}</TableCell>
+                <TableCell>{user.email_address}</TableCell>
+                {currentUserRole === "super_admin" && (
+                  <TableCell>{user.organization?.name || ""}</TableCell>
+                )}
+                <TableCell>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : ""}</TableCell>
+                <TableCell>{user.created_at ? new Date(user.created_at).toLocaleString() : ""}</TableCell>
                 <TableCell>
                   <Chip
-                    label={user.role}
+                    label={user.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                     size="small"
-                    className={`role-chip ${user.role.toLowerCase()}`}
+                    className={`role-chip ${user.role}`}
                   />
                 </TableCell>
                 <TableCell align="right">
@@ -269,21 +283,103 @@ export default function Users() {
 function NewUserCard({ onCancel, onUserAdded }) {
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    email_address: "",
     password: "",
-    organization: "",
     role: "",
+    organization_id: "",
+    new_organization: null
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
+  const [showNewOrgForm, setShowNewOrgForm] = useState(false);
+  const navigate = useNavigate();
+
+  // Get current user role from localStorage
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.role;
+
+  useEffect(() => {
+    // Fetch organizations if user is super_admin
+    if (currentUserRole === "super_admin") {
+      const fetchOrganizations = async () => {
+        try {
+          const response = await organizationsService.getOrganizations();
+          // The API might return { organizations: [...] } or just the array
+          const orgs = Array.isArray(response) ? response : response.organizations || [];
+          setOrganizations(orgs);
+        } catch (error) {
+          console.error("Failed to fetch organizations:", error);
+          setFormErrors((prev) => ({
+            ...prev,
+            submit: "Failed to load organizations. Please try again.",
+          }));
+        }
+      };
+      fetchOrganizations();
+    }
+  }, [currentUserRole]);
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = "Name is required";
+    }
+
+    if (!formData.email_address.trim()) {
+      errors.email_address = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email_address)) {
+      errors.email_address = "Invalid email format";
+    }
+
+    if (!formData.password) {
+      errors.password = "Password is required";
+    } else if (passwordError) {
+      errors.password = passwordError;
+    }
+
+    if (!formData.role) {
+      errors.role = "Role is required";
+    }
+
+    if (formData.role === "org_admin" && !showNewOrgForm && !formData.organization_id) {
+      errors.organization_id = "Organization is required";
+    }
+
+    if (showNewOrgForm && !formData.new_organization?.name) {
+      errors.new_organization = "Organization name is required";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    
+    if (id === "new_organization_name") {
+      setFormData(prev => ({
+        ...prev,
+        new_organization: { ...prev.new_organization, name: value }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [id]: value
+      }));
+    }
+
+    // Clear error when user starts typing
+    if (formErrors[id]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [id]: ""
+      }));
+    }
 
     // Password validation
     if (id === "password") {
@@ -301,12 +397,24 @@ function NewUserCard({ onCancel, onUserAdded }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (passwordError) {
+    
+    if (!validateForm()) {
       return;
     }
-    onUserAdded(formData);
+
+    setIsSubmitting(true);
+    try {
+      await onUserAdded(formData);
+    } catch (error) {
+      setFormErrors((prev) => ({
+        ...prev,
+        submit: error.message || "Failed to create user",
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -320,25 +428,31 @@ function NewUserCard({ onCancel, onUserAdded }) {
           </label>
           <input
             id="name"
-            className="user-input-field"
+            className={`user-input-field ${formErrors.name ? "error" : ""}`}
             value={formData.name}
             onChange={handleInputChange}
             required
           />
+          {formErrors.name && (
+            <div className="error-message">{formErrors.name}</div>
+          )}
         </div>
 
         <div className="add-new-user-form-group">
-          <label htmlFor="email" className="user-label">
+          <label htmlFor="email_address" className="user-label">
             Email Address
           </label>
           <input
-            id="email"
+            id="email_address"
             type="email"
-            className="user-input-field"
-            value={formData.email}
+            className={`user-input-field ${formErrors.email_address ? "error" : ""}`}
+            value={formData.email_address}
             onChange={handleInputChange}
             required
           />
+          {formErrors.email_address && (
+            <div className="error-message">{formErrors.email_address}</div>
+          )}
         </div>
 
         <div className="add-new-user-form-group">
@@ -349,7 +463,7 @@ function NewUserCard({ onCancel, onUserAdded }) {
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              className={`user-input-field ${passwordError ? "error" : ""}`}
+              className={`user-input-field ${formErrors.password ? "error" : ""}`}
               value={formData.password}
               onChange={handleInputChange}
               required
@@ -362,31 +476,12 @@ function NewUserCard({ onCancel, onUserAdded }) {
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
-          {passwordError && (
-            <div className="error-message">{passwordError}</div>
+          {formErrors.password && (
+            <div className="error-message">{formErrors.password}</div>
           )}
-        </div>
-
-        <div className="add-new-user-form-group">
-          <label htmlFor="organization" className="user-label">
-            Organization
-          </label>
-          <div className="user-select-wrapper">
-            <select
-              id="organization"
-              className="user-select-field"
-              value={formData.organization}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select organization
-              </option>
-              <option value="Dispatchly">Dispatchly</option>
-              <option value="Dispatchly Partner">Dispatchly Partner</option>
-              <option value="Dispatchly Customer">Dispatchly Customer</option>
-            </select>
-          </div>
+          {!formErrors.password && (
+            <div className="helper-text">Must be at least 8 characters with uppercase, lowercase, and number</div>
+          )}
         </div>
 
         <div className="add-new-user-form-group">
@@ -396,7 +491,7 @@ function NewUserCard({ onCancel, onUserAdded }) {
           <div className="user-select-wrapper">
             <select
               id="role"
-              className="user-select-field"
+              className={`user-select-field ${formErrors.role ? "error" : ""}`}
               value={formData.role}
               onChange={handleInputChange}
               required
@@ -404,22 +499,80 @@ function NewUserCard({ onCancel, onUserAdded }) {
               <option value="" disabled>
                 Select role
               </option>
-              <option value="Planning">Planning</option>
-              <option value="Dispatch">Dispatch</option>
+              <option value="planner">Planner</option>
+              <option value="dispatcher">Dispatcher</option>
+              <option value="org_admin">Organization Admin</option>
+              {currentUserRole === "super_admin" && (
+                <option value="super_admin">Super Admin</option>
+              )}
             </select>
           </div>
+          {formErrors.role && (
+            <div className="error-message">{formErrors.role}</div>
+          )}
         </div>
+
+        {currentUserRole === "super_admin" && formData.role === "org_admin" && (
+          <div className="add-new-user-form-group">
+            <button
+              type="button"
+              className="add-org-button"
+              style={{ marginBottom: 16 }}
+              onClick={() => navigate("/organizations")}
+            >
+              + Create New Organization
+            </button>
+          </div>
+        )}
+
+        {currentUserRole === "super_admin" && formData.role !== "org_admin" && formData.role !== "super_admin" && (
+          <div className="add-new-user-form-group">
+            <label htmlFor="organization_id" className="user-label">
+              Organization
+            </label>
+            <div className="user-select-wrapper">
+              <select
+                id="organization_id"
+                className={`user-select-field ${formErrors.organization_id ? "error" : ""}`}
+                value={formData.organization_id}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="" disabled>
+                  Select organization
+                </option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+              {formErrors.organization_id && (
+                <div className="error-message">{formErrors.organization_id}</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {formErrors.submit && (
+          <div className="error-message submit-error">{formErrors.submit}</div>
+        )}
 
         <div className="user-actions">
           <button
             type="submit"
             className="new-user-button user-add-button"
-            disabled={!!passwordError}
+            disabled={isSubmitting}
           >
-            Add User
+            {isSubmitting ? "Adding..." : "Add User"}
           </button>
-          <button type="button" className="user-cancel-link" onClick={onCancel}>
-            cancel
+          <button
+            type="button"
+            className="user-cancel-link"
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
+            Cancel
           </button>
         </div>
       </form>

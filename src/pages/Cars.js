@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import "../styles/Cars.css";
+import { addNotification } from "../utils/notifications";
+import { vehiclesService } from "../services/vehicles";
 import {
   Box,
   Card,
@@ -30,34 +33,48 @@ import {
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
-import "../styles/Cars.css";
-import { addNotification } from "../utils/notifications";
+
+// Filter configuration for the vehicles table
+const filterConfig = [
+  {
+    id: 'box_type',
+    label: 'Box Type',
+    options: ['All', 'closed', 'open']
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    options: ['All', 'active', 'maintenance', 'inactive']
+  }
+];
 
 // Initial mock data for vehicles
 const initialMockCars = [
   {
     id: "ABC-123",
-    plateNumber: "ABC-123",
-    make: "Toyota",
+    plate_number: "ABC-123",
     model: "Hiace",
     year: "2022",
-    type: "Van",
-    capacity: "1.5",
-    status: "Active",
-    currentLocation: "Warehouse 1",
-    lastMaintenance: "2024-02-15",
+    box_type: "closed",
+    capacity_volume: "1.5",
+    capacity_weight: "1000",
+    status: "active",
+    current_location: "Warehouse 1",
+    last_maintenance_date: "2024-02-15",
+    freezing_available: false,
   },
   {
     id: "XYZ-789",
-    plateNumber: "XYZ-789",
-    make: "Ford",
+    plate_number: "XYZ-789",
     model: "Transit",
     year: "2023",
-    type: "Truck",
-    capacity: "3.0",
-    status: "Maintenance",
-    currentLocation: "Service Center",
-    lastMaintenance: "2024-03-01",
+    box_type: "open",
+    capacity_volume: "3.0",
+    capacity_weight: "2000",
+    status: "maintenance",
+    current_location: "Service Center",
+    last_maintenance_date: "2024-03-01",
+    freezing_available: false,
   },
 ];
 
@@ -72,45 +89,149 @@ const getStoredCars = () => {
 };
 
 function Cars() {
-  // State management
-  const [cars, setCars] = useState(getStoredCars());
+  // State declarations
+  const [vehicles, setVehicles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState(null);
-  const [selectedCar, setSelectedCar] = useState(null);
-  const [showNewCarForm, setShowNewCarForm] = useState(false);
+  const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingCar, setEditingCar] = useState(null);
+  const [editingVehicle, setEditingVehicle] = useState(null);
   const [filters, setFilters] = useState({
-    type: "All",
+    box_type: "All",
     status: "All",
-    location: "All",
+  });
+  const [formData, setFormData] = useState({
+    plate_number: "",
+    capacity_volume: "",
+    capacity_weight: "",
+    status: "active",
+    model: "",
+    year: "",
+    box_type: "closed",
+    last_maintenance_date: "",
+    freezing_available: false
   });
 
-  const filterConfig = [
-    {
-      id: "type",
-      label: "Vehicle Type",
-      options: ["All", "Van", "Truck", "Car", "Other"],
-    },
-    {
-      id: "status",
-      label: "Status",
-      options: ["All", "Active", "Maintenance", "Inactive"],
-    },
-    {
-      id: "location",
-      label: "Current Location",
-      options: [
-        "All",
-        "Warehouse 1",
-        "Warehouse 2",
-        "Service Center",
-        "On Route",
-      ],
-    },
-  ];
+  // Get current user role from localStorage
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.role;
+
+  // Fetch vehicles on component mount
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const fetchVehicles = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await vehiclesService.getVehicles();
+      setVehicles(data);
+    } catch (err) {
+      console.error('Error fetching vehicles:', err);
+      setError('Failed to load vehicles. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddVehicle = async (vehicleData) => {
+    try {
+      setError(null);
+      // Ensure we're sending the exact status from the form
+      const vehicleToCreate = {
+        ...vehicleData,
+        status: vehicleData.status // Explicitly include the status from form data
+      };
+      const newVehicle = await vehiclesService.createVehicle({ vehicle: vehicleToCreate });
+      setVehicles(prev => [...prev, newVehicle]);
+      setShowNewVehicleForm(false);
+      setFormData({
+        plate_number: "",
+        capacity_volume: "",
+        capacity_weight: "",
+        status: "active", // Reset to default for next form
+        model: "",
+        year: "",
+        box_type: "closed",
+        last_maintenance_date: "",
+        freezing_available: false
+      });
+    } catch (err) {
+      console.error('Error adding vehicle:', err);
+      setError('Failed to add vehicle. Please try again.');
+    }
+  };
+
+  const handleUpdateVehicle = async (id, updatedData) => {
+    try {
+      setError(null);
+      const updatedVehicle = await vehiclesService.updateVehicle(id, { vehicle: updatedData });
+      setVehicles(prev => 
+        prev.map(vehicle => 
+          vehicle.id === id ? updatedVehicle : vehicle
+        )
+      );
+      setSelectedVehicle(null);
+    } catch (err) {
+      console.error('Error updating vehicle:', err);
+      setError('Failed to update vehicle. Please try again.');
+    }
+  };
+
+  const handleDeleteVehicle = async (id) => {
+    if (window.confirm('Are you sure you want to delete this vehicle?')) {
+      try {
+        setError(null);
+        await vehiclesService.deleteVehicle(id);
+        setVehicles(prev => prev.filter(vehicle => vehicle.id !== id));
+      } catch (err) {
+        console.error('Error deleting vehicle:', err);
+        setError('Failed to delete vehicle. Please try again.');
+      }
+    }
+  };
+
+  const handleUpdateLocation = async (id, locationData) => {
+    try {
+      setError(null);
+      await vehiclesService.updateVehicleLocation(id, locationData);
+      // Refresh vehicle data to get updated location
+      await fetchVehicles();
+    } catch (err) {
+      console.error('Error updating vehicle location:', err);
+      setError('Failed to update vehicle location. Please try again.');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading vehicles...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <p className="error-message">{error}</p>
+        <button 
+          className="retry-button"
+          onClick={fetchVehicles}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   // Handlers
   const handleSearchChange = (event) => {
@@ -127,13 +248,13 @@ function Cars() {
   };
 
   const handleActionMenuOpen = (event, car) => {
-    setSelectedCar(car);
+    setSelectedVehicle(car);
     setActionMenuAnchorEl(event.currentTarget);
   };
 
   const handleActionMenuClose = () => {
     setActionMenuAnchorEl(null);
-    setSelectedCar(null);
+    setSelectedVehicle(null);
   };
 
   const handlePageChange = (event, newPage) => {
@@ -145,103 +266,33 @@ function Cars() {
     setPage(0);
   };
 
-  const handleAddNewCar = () => {
-    setShowNewCarForm(true);
-  };
-
-  const handleCarAdded = (newCar) => {
-    const carToAdd = {
-      id: newCar.plateNumber,
-      plateNumber: newCar.plateNumber,
-      make: newCar.make,
-      model: newCar.model,
-      year: newCar.year,
-      type: newCar.type,
-      capacity: newCar.capacity,
-      status: newCar.status,
-      currentLocation: newCar.location,
-      lastMaintenance: newCar.lastMaintenance,
-    };
-
-    const updatedCars = [...cars, carToAdd];
-    setCars(updatedCars);
-    localStorage.setItem("cars", JSON.stringify(updatedCars));
-    setShowNewCarForm(false);
-
-    // Add notification for new car
-    addNotification({
-      type: "new_car",
-      plateNumber: newCar.plateNumber,
-      make: newCar.make,
-      model: newCar.model,
-      type: newCar.type,
-    });
-  };
-
-  const handleDeleteCar = (carId) => {
-    const updatedCars = cars.filter((car) => car.id !== carId);
-    setCars(updatedCars);
-    localStorage.setItem("cars", JSON.stringify(updatedCars));
-    handleActionMenuClose();
-  };
-
   const handleEditClick = (car) => {
-    setSelectedCar(car);
-    setEditingCar({
+    setSelectedVehicle(car);
+    setEditingVehicle({
       id: car.id,
-      plateNumber: car.plateNumber,
-      make: car.make,
+      plate_number: car.plate_number,
       model: car.model,
       year: car.year,
-      type: car.type,
-      capacity: car.capacity,
+      box_type: car.box_type,
+      capacity_volume: car.capacity_volume,
+      capacity_weight: car.capacity_weight,
       status: car.status,
-      location: car.currentLocation,
-      lastMaintenance: car.lastMaintenance,
+      last_maintenance_date: car.last_maintenance_date,
+      freezing_available: car.freezing_available,
     });
     setIsEditing(true);
     handleActionMenuClose();
   };
 
-  const handleEditSubmit = (editedCar) => {
-    const updatedCar = {
-      id: editedCar.id,
-      plateNumber: editedCar.plateNumber,
-      make: editedCar.make,
-      model: editedCar.model,
-      year: editedCar.year,
-      type: editedCar.type,
-      capacity: editedCar.capacity,
-      status: editedCar.status,
-      currentLocation: editedCar.location,
-      lastMaintenance: editedCar.lastMaintenance,
-    };
-
-    const updatedCars = cars.map((car) =>
-      car.id === editedCar.id ? updatedCar : car
-    );
-
-    setCars(updatedCars);
-    localStorage.setItem("cars", JSON.stringify(updatedCars));
-    setIsEditing(false);
-    setEditingCar(null);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditingCar(null);
-  };
-
   // Filter and search logic
-  const filteredCars = cars.filter((car) => {
+  const filteredCars = vehicles.filter((car) => {
     const matchesSearch = Object.values(car).some((value) =>
       value.toString().toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const matchesFilters =
-      (filters.type === "All" || car.type === filters.type) &&
-      (filters.status === "All" || car.status === filters.status) &&
-      (filters.location === "All" || car.currentLocation === filters.location);
+      (filters.box_type === "All" || car.box_type === filters.box_type) &&
+      (filters.status === "All" || car.status === filters.status);
 
     return matchesSearch && matchesFilters;
   });
@@ -255,56 +306,56 @@ function Cars() {
   if (isEditing) {
     return (
       <div className="cars-container">
-        <button className="back-button" onClick={handleCancelEdit}>
+        <button className="back-button" onClick={() => setIsEditing(false)}>
           <ArrowBackIcon />
           Back to Vehicles
         </button>
         <EditCarCard
-          car={editingCar}
-          onCancel={handleCancelEdit}
-          onEditSubmit={handleEditSubmit}
+          vehicle={editingVehicle}
+          formData={formData}
+          setFormData={setFormData}
+          handleUpdateVehicle={handleUpdateVehicle}
+          handleEditClick={handleEditClick}
+          handleDeleteVehicle={handleDeleteVehicle}
         />
       </div>
     );
   }
 
-  if (showNewCarForm) {
+  if (showNewVehicleForm) {
     return (
       <div className="cars-container">
         <NewCarCard
-          onCancel={() => setShowNewCarForm(false)}
-          onCarAdded={handleCarAdded}
+          onCancel={() => setShowNewVehicleForm(false)}
+          onCarAdded={handleAddVehicle}
         />
       </div>
     );
   }
 
   return (
-    <div className="cars-container">
-      {/* Header Section */}
-      <div className="cars-header">
-        <h1 className="cars-title">Fleet Vehicles</h1>
+    <Box className="cars-container">
+      <div className="cars-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 className="cars-title">Vehicles</h1>
         <Button
           variant="outlined"
           color="success"
           startIcon={<AddIcon />}
-          className="add-car-button"
-          onClick={handleAddNewCar}
+          className="add-product-button"
+          onClick={() => setShowNewVehicleForm(true)}
         >
-          Add New Vehicle
+          Add Vehicle
         </Button>
       </div>
 
-      {/* Filters and Search Section */}
       <Card className="filters-card">
-        <Grid container spacing={3} className="filters-grid">
+        <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
               placeholder="Search vehicles..."
               value={searchQuery}
               onChange={handleSearchChange}
-              className="search-field"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -340,111 +391,109 @@ function Cars() {
         </Grid>
       </Card>
 
-      {/* Cars Table */}
-      <Card className="cars-table-card">
-        <TableContainer>
-          <Table className="cars-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Plate Number</TableCell>
-                <TableCell>Make</TableCell>
-                <TableCell>Model</TableCell>
-                <TableCell>Year</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Capacity (Tons)</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Current Location</TableCell>
-                <TableCell>Last Maintenance</TableCell>
-                <TableCell align="right">Actions</TableCell>
+      <TableContainer component={Card}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Vehicle ID</TableCell>
+              <TableCell>Plate Number</TableCell>
+              <TableCell>Model</TableCell>
+              <TableCell>Year</TableCell>
+              <TableCell>Box Type</TableCell>
+              <TableCell>Capacity Volume</TableCell>
+              <TableCell>Capacity Weight</TableCell>
+              {currentUserRole === "super_admin" && <TableCell>Organization</TableCell>}
+              <TableCell>Status</TableCell>
+              <TableCell>Last Maintenance</TableCell>
+              <TableCell>Freezing Available</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {paginatedCars.map((vehicle) => (
+              <TableRow key={vehicle.id}>
+                <TableCell>{vehicle.id}</TableCell>
+                <TableCell>{vehicle.plate_number}</TableCell>
+                <TableCell>{vehicle.model}</TableCell>
+                <TableCell>{vehicle.year}</TableCell>
+                <TableCell>{vehicle.box_type}</TableCell>
+                <TableCell>{vehicle.capacity_volume}</TableCell>
+                <TableCell>{vehicle.capacity_weight}</TableCell>
+                {currentUserRole === "super_admin" && (
+                  <TableCell>{vehicle.organization?.name || ""}</TableCell>
+                )}
+                <TableCell>
+                  <Chip
+                    label={vehicle.status}
+                    color={
+                      vehicle.status === 'active'
+                        ? 'success'
+                        : vehicle.status === 'maintenance'
+                        ? 'warning'
+                        : 'error'
+                    }
+                  />
+                </TableCell>
+                <TableCell>{vehicle.last_maintenance_date}</TableCell>
+                <TableCell>{vehicle.freezing_available ? "Yes" : "No"}</TableCell>
+                <TableCell>
+                  <IconButton
+                    onClick={(e) => handleActionMenuOpen(e, vehicle)}
+                    size="small"
+                  >
+                    <MoreIcon />
+                  </IconButton>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedCars.map((car) => (
-                <TableRow key={car.id}>
-                  <TableCell>{car.plateNumber}</TableCell>
-                  <TableCell>{car.make}</TableCell>
-                  <TableCell>{car.model}</TableCell>
-                  <TableCell>{car.year}</TableCell>
-                  <TableCell>{car.type}</TableCell>
-                  <TableCell>{car.capacity} tons</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={car.status}
-                      className={`status-chip status-${car.status.toLowerCase()}`}
-                    />
-                  </TableCell>
-                  <TableCell>{car.currentLocation}</TableCell>
-                  <TableCell>{car.lastMaintenance}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      className="action-button"
-                      onClick={(e) => handleActionMenuOpen(e, car)}
-                    >
-                      <MoreIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <div className="pagination-container">
-          <TablePagination
-            component="div"
-            count={filteredCars.length}
-            page={page}
-            onPageChange={handlePageChange}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleRowsPerPageChange}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-          />
-        </div>
-      </Card>
+            ))}
+          </TableBody>
+        </Table>
+        <TablePagination
+          component="div"
+          count={filteredCars.length}
+          page={page}
+          onPageChange={handlePageChange}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleRowsPerPageChange}
+        />
+      </TableContainer>
 
       {/* Action Menu */}
       <Menu
         anchorEl={actionMenuAnchorEl}
         open={Boolean(actionMenuAnchorEl)}
         onClose={handleActionMenuClose}
-        className="action-menu"
       >
-        <MenuItem
-          onClick={() => selectedCar && handleEditClick(selectedCar)}
-          className="action-menu-item"
-        >
+        <MenuItem onClick={() => handleEditClick(selectedVehicle)}>
           <EditIcon fontSize="small" /> Edit
         </MenuItem>
-        <MenuItem
-          onClick={() => selectedCar && handleDeleteCar(selectedCar.id)}
-          className="action-menu-item delete"
-        >
+        <MenuItem onClick={() => handleDeleteVehicle(selectedVehicle?.id)}>
           <DeleteIcon fontSize="small" /> Delete
         </MenuItem>
       </Menu>
-    </div>
+    </Box>
   );
 }
 
 // NewCarCard Component
 function NewCarCard({ onCancel, onCarAdded }) {
   const [formData, setFormData] = useState({
-    plateNumber: "",
-    make: "",
+    plate_number: "",
     model: "",
     year: "",
-    type: "",
-    capacity: "",
-    status: "Active",
-    location: "",
-    lastMaintenance: "",
+    box_type: "closed",
+    capacity_volume: "",
+    capacity_weight: "",
+    status: "active",
+    last_maintenance_date: "",
+    freezing_available: false
   });
 
   const handleInputChange = (e) => {
-    const { id, value } = e.target;
+    const { id, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [id]: value,
+      [id]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -463,30 +512,16 @@ function NewCarCard({ onCancel, onCarAdded }) {
         <h1 className="car-title">Add New Vehicle</h1>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="plateNumber" className="car-label">
+          <label htmlFor="plate_number" className="car-label">
             Plate Number
           </label>
           <input
-            id="plateNumber"
+            id="plate_number"
             className="car-input-field"
-            value={formData.plateNumber}
+            value={formData.plate_number}
             onChange={handleInputChange}
             required
             placeholder="Enter plate number"
-          />
-        </div>
-
-        <div className="add-new-car-form-group">
-          <label htmlFor="make" className="car-label">
-            Make
-          </label>
-          <input
-            id="make"
-            className="car-input-field"
-            value={formData.make}
-            onChange={handleInputChange}
-            required
-            placeholder="Enter vehicle make"
           />
         </div>
 
@@ -522,42 +557,57 @@ function NewCarCard({ onCancel, onCarAdded }) {
         </div>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="type" className="car-label">
-            Vehicle Type
+          <label htmlFor="box_type" className="car-label">
+            Box Type
           </label>
           <div className="car-select-wrapper">
             <select
-              id="type"
+              id="box_type"
               className="car-select-field"
-              value={formData.type}
+              value={formData.box_type}
               onChange={handleInputChange}
               required
             >
               <option value="" disabled>
-                Select vehicle type
+                Select box type
               </option>
-              <option value="Van">Van</option>
-              <option value="Truck">Truck</option>
-              <option value="Car">Car</option>
-              <option value="Other">Other</option>
+              <option value="closed">Closed</option>
+              <option value="open">Open</option>
             </select>
           </div>
         </div>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="capacity" className="car-label">
-            Capacity (Tons)
+          <label htmlFor="capacity_volume" className="car-label">
+            Capacity (Volume)
           </label>
           <input
-            id="capacity"
+            id="capacity_volume"
             type="number"
             step="0.1"
             min="0.1"
             className="car-input-field"
-            value={formData.capacity}
+            value={formData.capacity_volume}
             onChange={handleInputChange}
             required
             placeholder="e.g., 1.5"
+          />
+        </div>
+
+        <div className="add-new-car-form-group">
+          <label htmlFor="capacity_weight" className="car-label">
+            Capacity (Weight)
+          </label>
+          <input
+            id="capacity_weight"
+            type="number"
+            step="100"
+            min="100"
+            className="car-input-field"
+            value={formData.capacity_weight}
+            onChange={handleInputChange}
+            required
+            placeholder="e.g., 1000"
           />
         </div>
 
@@ -573,47 +623,38 @@ function NewCarCard({ onCancel, onCarAdded }) {
               onChange={handleInputChange}
               required
             >
-              <option value="Active">Active</option>
-              <option value="Maintenance">Maintenance</option>
-              <option value="Inactive">Inactive</option>
+              <option value="active">Active</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
         </div>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="location" className="car-label">
-            Current Location
-          </label>
-          <div className="car-select-wrapper">
-            <select
-              id="location"
-              className="car-select-field"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select location
-              </option>
-              <option value="Warehouse 1">Warehouse 1</option>
-              <option value="Warehouse 2">Warehouse 2</option>
-              <option value="Service Center">Service Center</option>
-              <option value="On Route">On Route</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="add-new-car-form-group">
-          <label htmlFor="lastMaintenance" className="car-label">
+          <label htmlFor="last_maintenance_date" className="car-label">
             Last Maintenance Date
           </label>
           <input
-            id="lastMaintenance"
+            id="last_maintenance_date"
             type="date"
             className="car-input-field"
-            value={formData.lastMaintenance}
+            value={formData.last_maintenance_date}
             onChange={handleInputChange}
             required
+          />
+        </div>
+
+        <div className="add-new-car-form-group">
+          <label htmlFor="freezing_available" className="car-label">
+            Freezing Available
+          </label>
+          <input
+            id="freezing_available"
+            type="checkbox"
+            className="car-checkbox"
+            checked={formData.freezing_available}
+            onChange={handleInputChange}
+            disabled={formData.box_type === "open"}
           />
         </div>
 
@@ -632,13 +673,23 @@ function NewCarCard({ onCancel, onCarAdded }) {
 
 // EditCarCard Component
 function EditCarCard({ car, onCancel, onEditSubmit }) {
-  const [formData, setFormData] = useState(car);
+  const [formData, setFormData] = useState({
+    plate_number: car?.plate_number || '',
+    model: car?.model || '',
+    year: car?.year || '',
+    box_type: car?.box_type || 'closed',
+    capacity_volume: car?.capacity_volume || '',
+    capacity_weight: car?.capacity_weight || '',
+    status: car?.status || 'active',
+    last_maintenance_date: car?.last_maintenance_date || '',
+    freezing_available: car?.freezing_available || false
+  });
 
   const handleInputChange = (e) => {
-    const { id, value } = e.target;
+    const { id, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [id]: value,
+      [id]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -653,26 +704,13 @@ function EditCarCard({ car, onCancel, onEditSubmit }) {
         <h1 className="car-title">Edit Vehicle</h1>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="plateNumber" className="car-label">
+          <label htmlFor="plate_number" className="car-label">
             Plate Number
           </label>
           <input
-            id="plateNumber"
+            id="plate_number"
             className="car-input-field"
-            value={formData.plateNumber}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-
-        <div className="add-new-car-form-group">
-          <label htmlFor="make" className="car-label">
-            Make
-          </label>
-          <input
-            id="make"
-            className="car-input-field"
-            value={formData.make}
+            value={formData.plate_number}
             onChange={handleInputChange}
             required
           />
@@ -708,39 +746,54 @@ function EditCarCard({ car, onCancel, onEditSubmit }) {
         </div>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="type" className="car-label">
-            Vehicle Type
+          <label htmlFor="box_type" className="car-label">
+            Box Type
           </label>
           <div className="car-select-wrapper">
             <select
-              id="type"
+              id="box_type"
               className="car-select-field"
-              value={formData.type}
+              value={formData.box_type}
               onChange={handleInputChange}
               required
             >
-              <option value="Van">Van</option>
-              <option value="Truck">Truck</option>
-              <option value="Car">Car</option>
-              <option value="Other">Other</option>
+              <option value="closed">Closed</option>
+              <option value="open">Open</option>
             </select>
           </div>
         </div>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="capacity" className="car-label">
-            Capacity (Tons)
+          <label htmlFor="capacity_volume" className="car-label">
+            Capacity (Volume)
           </label>
           <input
-            id="capacity"
+            id="capacity_volume"
             type="number"
             step="0.1"
             min="0.1"
             className="car-input-field"
-            value={formData.capacity}
+            value={formData.capacity_volume}
             onChange={handleInputChange}
             required
             placeholder="e.g., 1.5"
+          />
+        </div>
+
+        <div className="add-new-car-form-group">
+          <label htmlFor="capacity_weight" className="car-label">
+            Capacity (Weight)
+          </label>
+          <input
+            id="capacity_weight"
+            type="number"
+            step="100"
+            min="100"
+            className="car-input-field"
+            value={formData.capacity_weight}
+            onChange={handleInputChange}
+            required
+            placeholder="e.g., 1000"
           />
         </div>
 
@@ -756,44 +809,38 @@ function EditCarCard({ car, onCancel, onEditSubmit }) {
               onChange={handleInputChange}
               required
             >
-              <option value="Active">Active</option>
-              <option value="Maintenance">Maintenance</option>
-              <option value="Inactive">Inactive</option>
+              <option value="active">Active</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
         </div>
 
         <div className="add-new-car-form-group">
-          <label htmlFor="location" className="car-label">
-            Current Location
-          </label>
-          <div className="car-select-wrapper">
-            <select
-              id="location"
-              className="car-select-field"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="Warehouse 1">Warehouse 1</option>
-              <option value="Warehouse 2">Warehouse 2</option>
-              <option value="Service Center">Service Center</option>
-              <option value="On Route">On Route</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="add-new-car-form-group">
-          <label htmlFor="lastMaintenance" className="car-label">
+          <label htmlFor="last_maintenance_date" className="car-label">
             Last Maintenance Date
           </label>
           <input
-            id="lastMaintenance"
+            id="last_maintenance_date"
             type="date"
             className="car-input-field"
-            value={formData.lastMaintenance}
+            value={formData.last_maintenance_date}
             onChange={handleInputChange}
             required
+          />
+        </div>
+
+        <div className="add-new-car-form-group">
+          <label htmlFor="freezing_available" className="car-label">
+            Freezing Available
+          </label>
+          <input
+            id="freezing_available"
+            type="checkbox"
+            className="car-checkbox"
+            checked={formData.freezing_available}
+            onChange={handleInputChange}
+            disabled={formData.box_type === "open"}
           />
         </div>
 

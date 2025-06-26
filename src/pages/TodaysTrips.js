@@ -3,112 +3,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import "../styles/TodaysTrips.css";
-
-const orders = [
-  {
-    id: 1,
-    status: "Completed",
-    statusColor: "completed",
-    date: new Date().toISOString().split("T")[0],
-    locations: [
-      {
-        name: "Cairo Warehouse",
-        address: "17 Assem St., HELIOPOLIS",
-        type: "Pickup",
-        weight: "14Kg",
-        time: "08:00 AM",
-      },
-      {
-        name: "Alexandria Hub",
-        address: "36 Khalid Basha St. Victoria",
-        type: "Dropoff",
-        weight: "14Kg",
-        time: "11:30 AM",
-      },
-    ],
-  },
-  {
-    id: 2,
-    status: "Ongoing",
-    statusColor: "ongoing",
-    date: new Date().toISOString().split("T")[0],
-    expanded: true,
-    locations: [
-      {
-        name: "Cairo Warehouse",
-        address: "17 Assem St., HELIOPOLIS",
-        type: "Pickup",
-        weight: "14Kg",
-        time: "09:00 AM",
-      },
-      {
-        name: "Alexandria Hub",
-        address: "36 Khalid Basha St. Victoria",
-        type: "Dropoff",
-        weight: "3Kg",
-        time: "12:30 PM",
-      },
-      {
-        name: "Alexandria Center",
-        address: "10 El Dokki Bldgs., MOSTAFA KAMEL",
-        type: "Dropoff",
-        weight: "5Kg",
-        time: "01:15 PM",
-      },
-      {
-        name: "Port Said Facility",
-        address: "60 Housing Bank Bldg., El-Dawahi",
-        type: "Dropoff",
-        weight: "6.5Kg",
-        time: "03:45 PM",
-      },
-    ],
-  },
-  {
-    id: 3,
-    status: "Pending",
-    statusColor: "pending",
-    date: new Date().toISOString().split("T")[0],
-    locations: [
-      {
-        name: "Cairo Warehouse",
-        address: "17 Assem St., HELIOPOLIS",
-        type: "Pickup",
-        weight: "8Kg",
-        time: "10:00 AM",
-      },
-      {
-        name: "Giza Hub",
-        address: "25 Nile St., Giza",
-        type: "Dropoff",
-        weight: "8Kg",
-        time: "11:30 AM",
-      },
-    ],
-  },
-  {
-    id: 4,
-    status: "Pending",
-    statusColor: "pending",
-    date: new Date().toISOString().split("T")[0],
-    locations: [
-      {
-        name: "Cairo Warehouse",
-        address: "17 Assem St., HELIOPOLIS",
-        type: "Pickup",
-        weight: "12Kg",
-        time: "11:00 AM",
-      },
-      {
-        name: "6th of October City",
-        address: "15 Industrial Zone, 6th of October",
-        type: "Dropoff",
-        weight: "12Kg",
-        time: "01:00 PM",
-      },
-    ],
-  },
-];
+import api from "../services/api";
+import { Button } from "@mui/material";
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 
 // Simple dropdown component
 function Dropdown({ trigger, children, isOpen, onToggle }) {
@@ -190,129 +87,193 @@ export default function TodaysTrips() {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get("order");
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      status: "Completed",
-      statusColor: "completed",
-      date: new Date().toISOString().split("T")[0],
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "14Kg",
-          time: "08:00 AM",
-        },
-        {
-          name: "Alexandria Hub",
-          address: "36 Khalid Basha St. Victoria",
-          type: "Dropoff",
-          weight: "14Kg",
-          time: "11:30 AM",
-        },
-      ],
-    },
-    {
-      id: 2,
-      status: "Ongoing",
-      statusColor: "ongoing",
-      date: new Date().toISOString().split("T")[0],
-      expanded: true,
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "14Kg",
-          time: "09:00 AM",
-        },
-        {
-          name: "Alexandria Hub",
-          address: "36 Khalid Basha St. Victoria",
-          type: "Dropoff",
-          weight: "3Kg",
-          time: "12:30 PM",
-        },
-        {
-          name: "Alexandria Center",
-          address: "10 El Dokki Bldgs., MOSTAFA KAMEL",
-          type: "Dropoff",
-          weight: "5Kg",
-          time: "01:15 PM",
-        },
-        {
-          name: "Port Said Facility",
-          address: "60 Housing Bank Bldg., El-Dawahi",
-          type: "Dropoff",
-          weight: "6.5Kg",
-          time: "03:45 PM",
-        },
-      ],
-    },
-    {
-      id: 3,
-      status: "Pending",
-      statusColor: "pending",
-      date: new Date().toISOString().split("T")[0],
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "8Kg",
-          time: "10:00 AM",
-        },
-        {
-          name: "Giza Hub",
-          address: "25 Nile St., Giza",
-          type: "Dropoff",
-          weight: "8Kg",
-          time: "11:30 AM",
-        },
-      ],
-    },
-    {
-      id: 4,
-      status: "Pending",
-      statusColor: "pending",
-      date: new Date().toISOString().split("T")[0],
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "12Kg",
-          time: "11:00 AM",
-        },
-        {
-          name: "6th of October City",
-          address: "15 Industrial Zone, 6th of October",
-          type: "Dropoff",
-          weight: "12Kg",
-          time: "01:00 PM",
-        },
-      ],
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [confirmationDialog, setConfirmationDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
+  const [selectedTripOrders, setSelectedTripOrders] = useState([]);
+  const [loadingTripOrders, setLoadingTripOrders] = useState(false);
+
+  // Google Maps setup
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+  });
+
+  // Fetch today's trips
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await api.get('/trips', {
+          params: {
+            date: new Date().toISOString().split('T')[0],
+            status: 'all'
+          }
+        });
+        setOrders(Array.isArray(response.data.trips) ? response.data.trips : []);
+      } catch (err) {
+        console.error('Error fetching trips:', err);
+        setError('Failed to load trips. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTrips();
+  }, []);
+
+  // Fetch orders for selected trip
+  useEffect(() => {
+    if (expandedOrder) {
+      setLoadingTripOrders(true);
+      api.get('/orders', { params: { trip_id: expandedOrder } })
+        .then(response => {
+          setSelectedTripOrders(Array.isArray(response.data.orders) ? response.data.orders : []);
+        })
+        .catch(() => setSelectedTripOrders([]))
+        .finally(() => setLoadingTripOrders(false));
+    } else {
+      setSelectedTripOrders([]);
+    }
+  }, [expandedOrder]);
+
+  // Extract all pickup and dropoff locations for the selected trip
+  const tripLocations = (selectedTripOrders || []).flatMap(order => [
+    order.pickup_location,
+    order.delivery_location
+  ].filter(loc => loc && loc.latitude && loc.longitude));
+
+  // Center map on first location or default
+  const defaultCenter = tripLocations.length > 0
+    ? { lat: parseFloat(tripLocations[0].latitude), lng: parseFloat(tripLocations[0].longitude) }
+    : { lat: 24.7136, lng: 46.6753 }; // Default to Riyadh
+
+  // Handle status changes
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      setError(null);
+      let trip = orders.find(order => order.id === orderId);
+      // If any required field is missing, fetch the trip from the backend
+      if (!trip || !trip.name || !trip.start_time) {
+        const response = await api.get(`/trips/${orderId}`);
+        trip = response.data.trip || response.data;
+      }
+      const payload = {
+        trip: {
+          name: trip.name || `Trip #${orderId}`,
+          start_time: trip.start_time || new Date().toISOString(),
+          end_time: trip.end_time || null,
+          scheduled_date: trip.scheduled_date,
+        status: newStatus
+        }
+      };
+      const response = await api.patch(`/trips/${orderId}`, payload);
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, ...response.data } : order
+        )
+      );
+    } catch (err) {
+      console.error('Error updating trip status:', err);
+      setError('Failed to update trip status. Please try again.');
+    }
+  };
+
+  // Handle order completion
+  const handleFinishOrder = async (orderId, event) => {
+    event.stopPropagation();
+    try {
+      setError(null);
+      const response = await api.post(`/trips/${orderId}/complete`);
+      
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, ...response.data } : order
+        )
+      );
+    } catch (err) {
+      console.error('Error completing trip:', err);
+      setError('Failed to complete trip. Please try again.');
+    }
+  };
+
+  // Handle order cancellation
+  const handleCancelOrder = async (orderId, event) => {
+    event.stopPropagation();
+    showConfirmation(
+      "Cancel Trip",
+      "Are you sure you want to cancel this trip? This action cannot be undone.",
+      async () => {
+        try {
+          setError(null);
+          await api.delete(`/trips/${orderId}`);
+          setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        } catch (err) {
+          console.error('Error cancelling trip:', err);
+          setError('Failed to cancel trip. Please try again.');
+        }
+      }
+    );
+  };
+
+  // Handle order start
+  const handleStartOrder = async (orderId, event) => {
+    event.stopPropagation();
+    try {
+      setError(null);
+      const response = await api.post(`/trips/${orderId}/start`);
+      
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, ...response.data } : order
+        )
+      );
+    } catch (err) {
+      console.error('Error starting trip:', err);
+      setError('Failed to start trip. Please try again.');
+    }
+  };
 
   const today = new Date().toISOString().split("T")[0];
-  const todaysOrders = orders.filter((order) => order.date === today);
+  const todaysOrders = orders.filter((order) => 
+    order.scheduled_date && order.scheduled_date.slice(0, 10) === today
+  );
 
   // Get the selected order details for the bottom panel
   const selectedOrder = expandedOrder
     ? todaysOrders.find((order) => order.id === expandedOrder)
     : null;
 
+  // Trip summary and details using backend data
+  const totalItems = selectedTripOrders.length;
+  const totalWeight = selectedTripOrders.reduce((sum, o) => sum + (parseFloat(o.total_weight) || 0), 0);
+  const firstPickup = (selectedTripOrders[0]?.pickup_location?.name) || "-";
+  // Optionally, calculate total distance if you have coordinates
+
+  // Assigned vehicle info from the selected trip with default values
+  const selectedTrip = todaysOrders.find((trip) => trip.id === expandedOrder);
+  const assignedVehicle = selectedTrip?.vehicle || {
+    plate_number: '-',
+    capacity_weight: '-',
+    capacity_volume: '-'
+  };
+
   // Calculate total weight and distance for the selected order
   const calculateOrderStats = (order) => {
     if (!order) return { totalWeight: 0, totalLocations: 0, totalDistance: 0 };
 
-    const totalWeight = order.locations.reduce((sum, loc) => {
-      return sum + parseFloat(loc.weight.replace("Kg", ""));
+    const locations = Array.isArray(order.locations) ? order.locations : [];
+    const totalWeight = locations.reduce((sum, loc) => {
+      return sum + parseFloat((loc.weight || "0").replace("Kg", ""));
     }, 0);
 
-    const totalLocations = order.locations.length;
+    const totalLocations = locations.length;
     // Mock distance calculation based on number of locations
     const totalDistance = totalLocations * 100; // 100km per location as mock data
 
@@ -328,41 +289,19 @@ export default function TodaysTrips() {
     setOpenDropdown(openDropdown === orderId ? null : orderId);
   };
 
-  const handleStatusChange = (orderId, newStatus) => {
-    setOrders(
-      orders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              status: newStatus,
-              statusColor: newStatus.toLowerCase(),
-            }
-          : order
-      )
-    );
-    setOpenDropdown(null);
-  };
-
   const handleOrderClick = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
     setOpenDropdown(null);
   };
 
-  const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    onConfirm: null,
-  });
-
   const showConfirmation = (title, message, onConfirm) => {
-    setConfirmDialog({
+    setConfirmationDialog({
       isOpen: true,
       title,
       message,
       onConfirm: () => {
         onConfirm();
-        setConfirmDialog({
+        setConfirmationDialog({
           isOpen: false,
           title: "",
           message: "",
@@ -384,91 +323,6 @@ export default function TodaysTrips() {
     );
   };
 
-  const handleFinishOrder = (orderId, event) => {
-    event.stopPropagation();
-    showConfirmation(
-      "Complete Order",
-      "Are you sure you want to mark this order as completed?",
-      () => {
-        handleStatusChange(orderId, "Completed");
-        setExpandedOrder(null);
-      }
-    );
-  };
-
-  const handleCancelOrder = (orderId, event) => {
-    event.stopPropagation();
-    showConfirmation(
-      "Cancel Order",
-      "Are you sure you want to cancel this order? This action cannot be undone.",
-      () => {
-        handleStatusChange(orderId, "Cancelled");
-        setExpandedOrder(null);
-      }
-    );
-  };
-
-  const handleStartOrder = (orderId, event) => {
-    event.stopPropagation();
-    showConfirmation(
-      "Start Order",
-      "Are you sure you want to start this order?",
-      () => {
-        handleStatusChange(orderId, "Ongoing");
-      }
-    );
-  };
-
-  const renderActionButtons = (order) => {
-    switch (order.status) {
-      case "Completed":
-        return (
-          <button
-            className="action-button delete-button"
-            onClick={(e) => handleDeleteOrder(order.id, e)}
-          >
-            Delete Order
-          </button>
-        );
-      case "Ongoing":
-        return (
-          <div className="action-buttons">
-            <button
-              className="action-button finish-button"
-              onClick={(e) => handleFinishOrder(order.id, e)}
-            >
-              Finish Order
-            </button>
-            <button
-              className="action-button cancel-button"
-              onClick={(e) => handleCancelOrder(order.id, e)}
-            >
-              Cancel Order
-            </button>
-          </div>
-        );
-      case "Pending":
-        return (
-          <div className="action-buttons">
-            <button
-              className="action-button start-button"
-              onClick={(e) => handleStartOrder(order.id, e)}
-            >
-              Start Order
-            </button>
-            <button
-              className="action-button cancel-button"
-              onClick={(e) => handleCancelOrder(order.id, e)}
-            >
-              Cancel Order
-            </button>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   useEffect(() => {
     // If there's an order ID in the URL, expand that order
     if (orderId) {
@@ -479,16 +333,99 @@ export default function TodaysTrips() {
     }
   }, [orderId]);
 
+  const renderActionButtons = (trip) => {
+    return (
+      <div className="trip-actions">
+        {trip.status === 'pending' && (
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            onClick={() => handleStartOrder(trip.id, null)}
+            className="action-button start"
+          >
+            Start Trip
+          </Button>
+        )}
+        {trip.status === 'in_progress' && (
+          <>
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFinishOrder(trip.id, e);
+              }}
+              className="action-button complete"
+            >
+              Complete
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCancelOrder(trip.id, e);
+              }}
+              className="action-button cancel"
+            >
+              Cancel
+            </Button>
+          </>
+        )}
+        {trip.status === 'completed' && (
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOrderClick(trip.id);
+            }}
+            className="action-button view"
+          >
+            View Details
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading trips...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <p className="error-message">{error}</p>
+        <button 
+          className="retry-button"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-container">
       {/* Add ConfirmationDialog component */}
       <ConfirmationDialog
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        onConfirm={confirmDialog.onConfirm}
+        isOpen={confirmationDialog.isOpen}
+        title={confirmationDialog.title}
+        message={confirmationDialog.message}
+        onConfirm={confirmationDialog.onConfirm}
         onCancel={() =>
-          setConfirmDialog({
+          setConfirmationDialog({
             isOpen: false,
             title: "",
             message: "",
@@ -529,7 +466,7 @@ export default function TodaysTrips() {
             >
               <div className="order-header">
                 <div className="order-title-row">
-                  <span className="order-title">Order {order.id}</span>
+                  <span className="order-title">Trip {order.id}</span>
                   <Dropdown
                     isOpen={openDropdown === order.id}
                     onToggle={(e) => handleDropdownToggle(order.id, e)}
@@ -581,7 +518,10 @@ export default function TodaysTrips() {
                   </Dropdown>
                 </div>
 
-                {expandedOrder === order.id && order.locations && (
+                {expandedOrder === order.id && (
+                  <>
+                    {/* Existing locations UI (if any) */}
+                    {order.locations && (
                   <div className="order-locations">
                     {order.locations.map((location, idx) => (
                       <div key={idx} className="location-item">
@@ -611,8 +551,38 @@ export default function TodaysTrips() {
                         </div>
                       </div>
                     ))}
-                    {renderActionButtons(order)}
+                      </div>
+                    )}
+                    {/* Drop-off locations as bullet points */}
+                    <div style={{ marginTop: 12 }}>
+                      <strong>Drop-off Locations:</strong>
+                      <ul>
+                        {selectedTripOrders.map((o) =>
+                          o.delivery_location ? (
+                            <li key={o.id}>
+                              {o.delivery_location.address || o.delivery_location.name || `Location #${o.delivery_location.id}`}
+                            </li>
+                          ) : null
+                        )}
+                      </ul>
+                    </div>
+                    {/* Trip status and status change */}
+                    <div style={{ marginTop: 8 }}>
+                      <strong>Status:</strong> {order.status}
+                      <select
+                        value={order.status}
+                        onChange={e => {
+                          e.stopPropagation();
+                          handleStatusChange(order.id, e.target.value);
+                        }}
+                        style={{ marginLeft: 8 }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">Ongoing</option>
+                        <option value="completed">Ended</option>
+                      </select>
                   </div>
+                  </>
                 )}
               </div>
             </div>
@@ -620,34 +590,37 @@ export default function TodaysTrips() {
         </div>
       </div>
 
-      {/* Right Panel - Map Placeholder and Details */}
+      {/* Right Panel - Map and Details */}
       <div className="map-panel">
-        {/* Map Placeholder */}
-        <div
-          className="map-container"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#f3f4f6",
-            color: "#6b7280",
-            fontSize: "1.2rem",
-            fontWeight: 500,
-          }}
-        >
-          Map Placeholder
-          <br />
-          (Google Maps Integration Coming Soon)
+        {/* Google Map with markers */}
+        <div className="map-container" style={{ height: 400, width: '100%' }}>
+          {isLoaded ? (
+            <GoogleMap
+              mapContainerStyle={{ height: '100%', width: '100%' }}
+              center={defaultCenter}
+              zoom={10}
+            >
+              {tripLocations.map((loc, idx) => (
+                <Marker
+                  key={idx}
+                  position={{ lat: parseFloat(loc.latitude), lng: parseFloat(loc.longitude) }}
+                  label={idx % 2 === 0 ? 'P' : 'D'}
+                />
+              ))}
+            </GoogleMap>
+          ) : (
+            <div>Loading map...</div>
+          )}
         </div>
 
-        {/* Bottom Panel - Only show when an order is selected */}
+        {/* Bottom Panel - Only show when a trip is selected */}
         {selectedOrder && (
           <div className="bottom-panel">
-            {/* Order Details */}
+            {/* Trip Details */}
             <div className="order-details">
               <div className="order-details-header">
                 <h3 className="order-details-title">
-                  ORDER {selectedOrder.id}
+                  TRIP {selectedOrder.id}
                 </h3>
                 <ExternalLinkIcon className="external-link-icon" />
               </div>
@@ -656,28 +629,22 @@ export default function TodaysTrips() {
                 <div className="stat-item">
                   <div className="stat-label">Total Items</div>
                   <div className="stat-value">
-                    {calculateOrderStats(selectedOrder).totalLocations}{" "}
-                    Locations
+                    {totalItems} Locations
                   </div>
                 </div>
                 <div className="stat-item">
                   <div className="stat-label">Total Weight</div>
                   <div className="stat-value">
-                    {calculateOrderStats(selectedOrder).totalWeight}
+                    {totalWeight} Kg
                   </div>
                 </div>
                 <div className="stat-item">
                   <div className="stat-label">From</div>
                   <div className="stat-value">
-                    {selectedOrder.locations[0].name}
+                    {firstPickup}
                   </div>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-label">Total Distance</div>
-                  <div className="stat-value">
-                    {calculateOrderStats(selectedOrder).totalDistance}
-                  </div>
-                </div>
+                {/* Optionally add total distance here */}
               </div>
 
               <div className="priority-section">
@@ -704,27 +671,28 @@ export default function TodaysTrips() {
                 <div className="vehicle-info-row">
                   <span className="vehicle-info-label">Truck</span>
                   <span className="vehicle-info-value">
-                    #TRK-{selectedOrder.id.toString().padStart(3, "0")}
+                    {assignedVehicle?.plate_number ? `#${assignedVehicle.plate_number}` : '-'}
                   </span>
                 </div>
 
                 <div className="vehicle-info-row">
                   <span className="vehicle-info-label">Max Capacity</span>
-                  <span className="vehicle-info-value">15 ton / 60 m³</span>
+                  <span className="vehicle-info-value">
+                    {assignedVehicle?.capacity_weight ? `${assignedVehicle.capacity_weight} ton` : '-'} / {assignedVehicle?.capacity_volume ? `${assignedVehicle.capacity_volume} m³` : '-'}
+                  </span>
                 </div>
 
                 <div className="vehicle-info-row">
                   <span className="vehicle-info-label">Current Load</span>
                   <span className="vehicle-info-value">
-                    {calculateOrderStats(selectedOrder).totalWeight}
+                    {totalWeight} Kg
                   </span>
                 </div>
 
                 <div className="vehicle-status">
-                  Vehicle Status:{" "}
-                  {selectedOrder.status === "Ongoing"
+                  Vehicle Status: {selectedOrder?.status === "Ongoing"
                     ? "In Transit"
-                    : selectedOrder.status === "Completed"
+                    : selectedOrder?.status === "Completed"
                     ? "Available"
                     : "Standby"}
                 </div>

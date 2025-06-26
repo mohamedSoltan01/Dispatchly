@@ -1,0 +1,82 @@
+.dispatch-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dispatch-page h1 {
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.dispatch-controls {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dispatch-button {
+  padding: 0.75rem 1.5rem;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dispatch-button:hover {
+  background-color: #1976d2;
+}
+
+.dispatch-button:disabled {
+  background-color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.order-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.order-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.order-card.selected {
+  border-color: #2196f3;
+  background-color: #e3f2fd;
+}
+
+.order-card h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.order-card p {
+  color: #666;
+  margin: 0.5rem 0;
+} 

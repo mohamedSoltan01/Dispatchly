@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -21,6 +21,7 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  CircularProgress,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -40,70 +41,16 @@ import {
   borderRadius,
 } from "../styles/designSystem";
 import { addNotification } from "../utils/notifications";
-
-// Mock data for initial state
-const initialMockOrders = [
-  {
-    id: "ORD001",
-    customer: "John Smith",
-    departureLocation: "New York Warehouse",
-    type: "Inbound",
-    weight: "500 kg",
-    arrivalLocation: "Boston Distribution Center",
-    arrivalDate: "2024-03-15",
-    status: "pending",
-    dispatchedAt: null,
-  },
-  {
-    id: "ORD002",
-    customer: "Sarah Johnson",
-    departureLocation: "Chicago Hub",
-    type: "Outbound",
-    weight: "750 kg",
-    arrivalLocation: "Detroit Facility",
-    arrivalDate: "2024-03-16",
-    status: "pending",
-    dispatchedAt: null,
-  },
-];
-
-// Helper function to get orders from localStorage or use initial data
-const getStoredOrders = () => {
-  try {
-    const saved = localStorage.getItem("dispatchOrders");
-    if (saved) {
-      const parsedOrders = JSON.parse(saved);
-      // Ensure each order has a unique ID and status
-      return parsedOrders.map((order) => ({
-        ...order,
-        status: order.status || "pending",
-        dispatchedAt: order.dispatchedAt || null,
-      }));
-    }
-    // Initialize mock data with status
-    const mockOrdersWithStatus = initialMockOrders.map((order) => ({
-      ...order,
-      status: "pending",
-      dispatchedAt: null,
-    }));
-    localStorage.setItem(
-      "dispatchOrders",
-      JSON.stringify(mockOrdersWithStatus)
-    );
-    return mockOrdersWithStatus;
-  } catch (error) {
-    console.error("Error loading orders from localStorage:", error);
-    return initialMockOrders.map((order) => ({
-      ...order,
-      status: "pending",
-      dispatchedAt: null,
-    }));
-  }
-};
+import { ordersService } from "../services/orders";
+import { productsService } from "../services/products";
+import tripsService from "../services/tripsService";
+import DispatchConfirmation from '../components/DispatchConfirmation';
 
 function DispatchOrder() {
   // State management
-  const [orders, setOrders] = useState(() => getStoredOrders());
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -116,6 +63,73 @@ function DispatchOrder() {
     type: "All",
     location: "All",
   });
+  const [products, setProducts] = useState({}); // Store product data with available boxes
+  const [proposedTrips, setProposedTrips] = useState(null);
+  const [showProposal, setShowProposal] = useState(false);
+
+  // Fetch orders and products on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Fetch orders
+        const ordersResponse = await ordersService.getOrders();
+        console.log('Orders API Response:', ordersResponse);
+        
+        // Fetch products to get current box quantities
+        const productsResponse = await productsService.getProducts();
+        console.log('Products API Response:', productsResponse);
+
+        // Create a map of product data with available boxes
+        const productsMap = {};
+        (Array.isArray(productsResponse) ? productsResponse : productsResponse.products || [])
+          .forEach(product => {
+            productsMap[product.id] = {
+              ...product,
+              available_boxes: product.number_of_boxes || 0
+            };
+          });
+
+        // Transform and validate the orders data
+        const validOrders = (Array.isArray(ordersResponse) ? ordersResponse : ordersResponse.orders || [])
+          .map(order => {
+            // Calculate used boxes for each product in the order
+            if (order.order_items) {
+              order.order_items.forEach(item => {
+                if (productsMap[item.product_id]) {
+                  productsMap[item.product_id].available_boxes -= item.quantity;
+                }
+              });
+            }
+
+            return {
+              id: order.id || order.order_number || '',
+              customer: order.customer_name || order.organization_name || '',
+              departureLocation: order.pickup_location?.name || order.departure_location || '',
+              type: order.order_type || 'Unknown',
+              weight: order.total_weight ? `${order.total_weight} kg` : '0 kg',
+              arrivalLocation: order.delivery_location?.name || order.arrival_location || '',
+              arrivalDate: order.delivery_deadline || order.arrival_date || '',
+              status: order.status || 'pending',
+              order_items: order.order_items || []
+            };
+          });
+
+        setOrders(validOrders);
+        setProducts(productsMap);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data. Please try again later.');
+        setOrders([]);
+        setProducts({});
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const filterConfig = [
     {
@@ -128,10 +142,12 @@ function DispatchOrder() {
       label: "Location",
       options: [
         "All",
-        "New York Warehouse",
-        "Chicago Hub",
-        "Boston Distribution Center",
-        "Detroit Facility",
+        ...new Set(
+          orders
+            .map(order => [order.departureLocation, order.arrivalLocation])
+            .flat()
+            .filter(Boolean)
+        ),
       ],
     },
   ];
@@ -171,18 +187,15 @@ function DispatchOrder() {
 
   const handleSelectClick = (orderId) => {
     setSelectedOrders((prevSelected) => {
-      // If the order is already selected, remove it
       if (prevSelected.includes(orderId)) {
         return prevSelected.filter((id) => id !== orderId);
       }
-      // Otherwise, add it to the selection
       return [...prevSelected, orderId];
     });
   };
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      // Select all orders on the current page
       const newSelected = paginatedOrders.map((order) => order.id);
       setSelectedOrders(newSelected);
     } else {
@@ -193,21 +206,24 @@ function DispatchOrder() {
   const isSelected = (orderId) => selectedOrders.includes(orderId);
 
   // Filter and search logic
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = (orders || [])
+    .filter(order => order.status === 'pending') // Only show not yet dispatched
+    .filter((order) => {
+      if (!order) return false;
+
     const matchesSearch = Object.values(order).some((value) =>
       value?.toString().toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const matchesFilters =
-      (filters.type === "All" || order.type === filters.type) &&
-      (filters.location === "All" ||
-        order.departureLocation === filters.location ||
-        order.arrivalLocation === filters.location);
+      const matchesType = filters.type === "All" || 
+        (order.type && order.type.toLowerCase() === filters.type.toLowerCase());
+      
+      const matchesLocation =
+        filters.location === "All" ||
+        (order.departureLocation && order.departureLocation === filters.location) ||
+        (order.arrivalLocation && order.arrivalLocation === filters.location);
 
-    // Only show non-dispatched orders in the table
-    const isNotDispatched = order.status !== "dispatched";
-
-    return matchesSearch && matchesFilters && isNotDispatched;
+      return matchesSearch && matchesType && matchesLocation;
   });
 
   // Pagination
@@ -216,58 +232,115 @@ function DispatchOrder() {
     page * rowsPerPage + rowsPerPage
   );
 
+  // Handle dispatch (proposal/confirmation flow)
   const handleDispatch = async () => {
-    if (selectedOrders.length === 0) {
-      return;
-    }
-
-    setIsSubmitting(true);
+    if (selectedOrders.length === 0) return;
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsSubmitting(true);
+      setShowThankYou(false);
+      setShowProposal(false);
+      setProposedTrips(null);
 
-      // Get all orders from localStorage
-      const allOrders = JSON.parse(
-        localStorage.getItem("dispatchOrders") || "[]"
-      );
-
-      // Update the status of selected orders
-      const updatedOrders = allOrders.map((order) => {
-        if (selectedOrders.includes(order.id)) {
-          // Add notification for each dispatched order
-          addNotification("dispatch_order", {
-            orderId: order.id,
-            type: order.type,
-            destination: order.arrivalLocation,
-            weight: order.weight,
-          });
-
-          return {
-            ...order,
-            status: "dispatched",
-            dispatchedAt: new Date().toISOString(),
-          };
-        }
-        return order;
-      });
-
-      // Save updated orders back to localStorage
-      localStorage.setItem("dispatchOrders", JSON.stringify(updatedOrders));
-
-      // Update the orders state to reflect changes
-      setOrders(updatedOrders);
-
-      // Show thank you screen
-      setShowThankYou(true);
-
-      // Clear selection after successful dispatch
-      setSelectedOrders([]);
+      // Propose trips for selected orders
+      const response = await tripsService.proposeTrips(selectedOrders);
+      if (response && response.proposed_trips && response.proposed_trips.length > 0) {
+        setProposedTrips(response.proposed_trips);
+        setShowProposal(true);
+      } else {
+        setError('No trips could be proposed for the selected orders.');
+      }
     } catch (error) {
-      console.error("Error dispatching orders:", error);
+      setError(error.message || 'Failed to propose trips. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Handle confirmation from the proposal page
+  const handleConfirmTrips = async (confirmedTrips) => {
+    setShowProposal(false);
+    setProposedTrips(null);
+    setSelectedOrders([]);
+    setShowThankYou(true);
+    // Optionally, refresh orders/products here
+    addNotification('trips_created', {
+      count: confirmedTrips?.length || 0,
+    });
+  };
+
+  // Handle rejection from the proposal page
+  const handleRejectTrips = () => {
+    setShowProposal(false);
+    setProposedTrips(null);
+  };
+
+  // Add delete handler
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) {
+      return;
+    }
+
+    try {
+      await ordersService.deleteOrder(orderId);
+      
+      // Refresh orders list
+      const response = await ordersService.getOrders();
+      const validOrders = (Array.isArray(response) ? response : response.orders || [])
+        .map(order => ({
+          id: order.id || order.order_number || '',
+          customer: order.customer_name || order.organization_name || '',
+          departureLocation: order.pickup_location?.name || order.departure_location || '',
+          type: order.order_type || 'Unknown',
+          weight: order.total_weight ? `${order.total_weight} kg` : '0 kg',
+          arrivalLocation: order.delivery_location?.name || order.arrival_location || '',
+          arrivalDate: order.delivery_deadline || order.arrival_date || '',
+          status: order.status || 'pending',
+          order_items: order.order_items || []
+        }));
+
+      setOrders(validOrders);
+      addNotification("order_deleted", { orderId });
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      setError("Failed to delete order. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
+
+  if (showProposal && proposedTrips) {
+    return (
+      <DispatchConfirmation
+        proposedTrips={proposedTrips}
+        onConfirm={handleConfirmTrips}
+        onReject={handleRejectTrips}
+      />
+    );
+  }
 
   if (showThankYou) {
     return (
@@ -303,39 +376,16 @@ function DispatchOrder() {
               }}
             />
           </div>
-          <Typography
-            variant="h4"
-            sx={{
-              ...typography.h3,
-              marginBottom: spacing.md,
-              color: colors.text.primary,
-            }}
-          >
+          <Typography variant="h5" style={{ marginBottom: 16 }}>
             Orders Dispatched Successfully!
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              ...typography.body1,
-              color: colors.text.secondary,
-              marginBottom: spacing.xl,
-              maxWidth: "400px",
-              margin: "0 auto 32px",
-            }}
-          >
-            The selected orders have been dispatched and are being processed.
-            You can track their status in the Orders section.
+          <Typography variant="body1" style={{ marginBottom: 24 }}>
+            The selected orders have been dispatched and are being processed. You can track their status in the Orders section.
           </Typography>
           <Button
             variant="contained"
             color="primary"
             onClick={() => setShowThankYou(false)}
-            sx={{
-              padding: "12px 24px",
-              borderRadius: borderRadius.md,
-              textTransform: "none",
-              ...typography.button,
-            }}
           >
             Back to Orders
           </Button>
@@ -457,6 +507,8 @@ function DispatchOrder() {
                 <TableCell>Weight</TableCell>
                 <TableCell>Arrival Location</TableCell>
                 <TableCell>Arrival Date</TableCell>
+                <TableCell>Products</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -472,10 +524,7 @@ function DispatchOrder() {
                     onClick={() => handleSelectClick(order.id)}
                     sx={{ cursor: "pointer" }}
                   >
-                    <TableCell
-                      padding="checkbox"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isItemSelected}
                         onChange={() => handleSelectClick(order.id)}
@@ -485,19 +534,38 @@ function DispatchOrder() {
                     <TableCell>{order.customer}</TableCell>
                     <TableCell>{order.departureLocation}</TableCell>
                     <TableCell>
-                      <span
-                        className={`order-type ${
-                          order.type.toLowerCase() === "inbound"
-                            ? "inbound"
-                            : "outbound"
-                        }`}
-                      >
+                      <span className={`order-type ${order.type.toLowerCase() === "inbound" ? "inbound" : "outbound"}`}>
                         {order.type}
                       </span>
                     </TableCell>
                     <TableCell>{order.weight}</TableCell>
                     <TableCell>{order.arrivalLocation}</TableCell>
                     <TableCell>{order.arrivalDate}</TableCell>
+                    <TableCell>
+                      {order.order_items?.map(item => (
+                        <div key={item.product_id}>
+                          {products[item.product_id]?.sku || 'Unknown Product'}: {item.quantity} boxes
+                          (Available: {products[item.product_id]?.available_boxes || 0})
+                        </div>
+                      ))}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteOrder(order.id);
+                        }}
+                        color="error"
+                        size="small"
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                          }
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 );
               })}

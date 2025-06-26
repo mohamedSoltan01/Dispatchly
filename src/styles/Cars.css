@@ -407,3 +407,20 @@
     overflow-x: auto;
   }
 }
+
+.car-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: #1976d2; /* Use your primary color */
+  margin-left: 10px;
+  vertical-align: middle;
+  border-radius: 4px;
+  border: 1px solid #bdbdbd;
+  transition: box-shadow 0.2s;
+}
+
+.add-new-car-form-group label.car-label {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}

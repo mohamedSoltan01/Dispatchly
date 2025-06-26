@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
-  Box,
   Card,
-  Typography,
   TextField,
   InputAdornment,
   IconButton,
@@ -13,7 +11,6 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  Chip,
   Menu,
   MenuItem,
   Button,
@@ -28,59 +25,20 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Visibility as ViewIcon,
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import "../styles/Products.css";
 import { addNotification } from "../utils/notifications";
+import { productsService } from "../services/products";
+import { organizationsService } from "../services/organizations";
+import { AuthContext } from "../App";
 
-// Move mock data outside component but keep it as a constant
-const initialMockProducts = [
-  {
-    id: "PRD001",
-    skuName: "SKU-ELEC-001",
-    dimensions: "10x20x30",
-    weight: "2.5",
-    temperature: "15-25°C",
-    numberOfBoxes: 5,
-    boxType: "Standard",
-    currentLocation: "Warehouse 1",
-    category: "Electronics",
-  },
-  {
-    id: "PRD002",
-    skuName: "SKU-CLOTH-002",
-    dimensions: "15x25x35",
-    weight: "1.8",
-    temperature: "N/A",
-    numberOfBoxes: 3,
-    boxType: "Custom",
-    currentLocation: "Warehouse 2",
-    category: "Clothing",
-  },
-];
-
-// Helper function to get products from localStorage or use initial data
-const getStoredProducts = () => {
-  try {
-    const saved = localStorage.getItem("products");
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Only set initial mock data if no products exist in localStorage
-    localStorage.setItem("products", JSON.stringify(initialMockProducts));
-    return initialMockProducts;
-  } catch (error) {
-    console.error("Error loading products from localStorage:", error);
-    return initialMockProducts;
-  }
-};
-
-// Add this helper function at the top level
+// Helper to format dimensions for display
 const formatDimensions = (dimensions) => {
   if (!dimensions) return "";
   if (typeof dimensions === "string") return dimensions;
   if (typeof dimensions === "object") {
+    // If backend returns as object: { length, width, height }
     return `${dimensions.length}x${dimensions.width}x${dimensions.height}`;
   }
   return "";
@@ -88,7 +46,9 @@ const formatDimensions = (dimensions) => {
 
 function Products({ onProductSelect, isSelectionMode = false }) {
   // State management
-  const [products, setProducts] = useState(() => getStoredProducts());
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -97,41 +57,26 @@ function Products({ onProductSelect, isSelectionMode = false }) {
   const [showNewProductForm, setShowNewProductForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [filters, setFilters] = useState({
-    category: "All",
-    location: "All",
-    boxType: "All",
-  });
 
-  const filterConfig = [
-    {
-      id: "category",
-      label: "Category",
-      options: ["All", "Electronics", "Clothing", "Food", "Other"],
-    },
-    {
-      id: "location",
-      label: "Current Location",
-      options: ["All", "Warehouse 1", "Warehouse 2", "Store"],
-    },
-    {
-      id: "boxType",
-      label: "Box Type",
-      options: ["All", "Standard", "Custom", "Special"],
-    },
-  ];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await productsService.getProducts();
+        setProducts(Array.isArray(response.products) ? response.products : []);
+      } catch (err) {
+        setError("Failed to load products.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   // Handlers
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
-    setPage(0);
-  };
-
-  const handleFilterChange = (filterId, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [filterId]: value,
-    }));
     setPage(0);
   };
 
@@ -158,48 +103,54 @@ function Products({ onProductSelect, isSelectionMode = false }) {
     setShowNewProductForm(true);
   };
 
-  const handleProductAdded = (newProduct) => {
-    const productToAdd = {
-      id: `PRD${Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, "0")}`,
-      skuName: newProduct.sku,
-      dimensions: `${newProduct.length}x${newProduct.width}x${newProduct.height}`,
-      weight: newProduct.weight,
-      numberOfBoxes: Number(newProduct.numberOfBoxes),
-      temperature: newProduct.minMaxTemp
-        ? `${newProduct.minTemp}°C - ${newProduct.maxTemp}°C`
-        : "N/A",
-      boxType: newProduct.boxType,
-      currentLocation: newProduct.location,
-      category: newProduct.category,
-      createdAt: new Date().toISOString(),
-    };
-
-    const updatedProducts = [...products, productToAdd];
-    setProducts(updatedProducts);
-    localStorage.setItem("products", JSON.stringify(updatedProducts));
-    setShowNewProductForm(false);
-
-    // Add notification for new product
-    addNotification({
-      type: "new_product",
-      productName: newProduct.sku,
-      category: newProduct.category,
-      location: newProduct.location,
-    });
+  const handleProductAdded = async (newProduct) => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Map newProduct to backend expected fields
+      const productData = {
+        product: {
+          sku: newProduct.sku,
+          weight: newProduct.weight,
+          storage_temperature: newProduct.storageTemperature,
+          required_temperature: newProduct.requiredTemperature,
+          length: newProduct.length !== undefined && newProduct.length !== "" ? Number(newProduct.length) : null,
+          width: newProduct.width !== undefined && newProduct.width !== "" ? Number(newProduct.width) : null,
+          height: newProduct.height !== undefined && newProduct.height !== "" ? Number(newProduct.height) : null,
+          number_of_boxes: newProduct.numberOfBoxes || 1,
+          ...(user?.role === 'super_admin' && { organization_id: newProduct.organizationId })
+        }
+      };
+      console.log('Submitting product data:', productData);
+      await productsService.createProduct(productData);
+      // Refetch products
+      const response = await productsService.getProducts();
+      setProducts(Array.isArray(response.products) ? response.products : []);
+      setShowNewProductForm(false);
+      addNotification({
+        type: "new_product",
+        productName: newProduct.sku,
+        location: newProduct.location,
+      });
+    } catch (error) {
+      console.error('Error creating product:', error);
+      setError("Failed to add product.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     try {
-      const updatedProducts = products.filter(
-        (product) => product.id !== productId
-      );
-      setProducts(updatedProducts);
-      localStorage.setItem("products", JSON.stringify(updatedProducts));
+      setLoading(true);
+      setError(null);
+      await productsService.deleteProduct(productId);
+      setProducts(products.filter((product) => product.id !== productId));
       handleActionMenuClose();
     } catch (error) {
-      console.error("Error deleting product:", error);
+      setError("Failed to delete product.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -228,15 +179,15 @@ function Products({ onProductSelect, isSelectionMode = false }) {
     }
 
     // Safely handle temperature parsing
-    let minTemp = "",
-      maxTemp = "";
+    let requiredTemperature = "",
+      storageTemperature = "";
     const hasTemperature = product.temperature && product.temperature !== "N/A";
     if (hasTemperature) {
       try {
         const tempParts = product.temperature.split("-");
         if (tempParts.length === 2) {
-          minTemp = tempParts[0].replace("°C", "").trim();
-          maxTemp = tempParts[1].replace("°C", "").trim();
+          requiredTemperature = tempParts[0].replace("°C", "").trim();
+          storageTemperature = tempParts[1].replace("°C", "").trim();
         }
       } catch (error) {
         console.error("Error parsing temperature:", error);
@@ -250,44 +201,42 @@ function Products({ onProductSelect, isSelectionMode = false }) {
       width,
       height,
       weight: product.weight || "",
-      minMaxTemp: hasTemperature,
-      minTemp,
-      maxTemp,
-      boxType: product.boxType || "",
+      requiredTemperature: hasTemperature ? Number(requiredTemperature) : null,
+      storageTemperature: hasTemperature ? Number(storageTemperature) : 0,
       location: product.currentLocation || product.location || "",
       category: product.category || "",
-      numberOfBoxes: product.numberOfBoxes || 1,
+      numberOfBoxes: product.number_of_boxes || 1,
     });
     setIsEditing(true);
     handleActionMenuClose();
   };
 
-  const handleEditSubmit = (editedProduct) => {
+  const handleEditSubmit = async (editedProduct) => {
     try {
-      const updatedProduct = {
-        id: editedProduct.id,
-        skuName: editedProduct.sku,
-        dimensions: `${editedProduct.length}x${editedProduct.width}x${editedProduct.height}`,
-        weight: editedProduct.weight,
-        temperature: editedProduct.minMaxTemp
-          ? `${editedProduct.minTemp}-${editedProduct.maxTemp}°C`
-          : "N/A",
-        numberOfBoxes: editedProduct.numberOfBoxes,
-        boxType: editedProduct.boxType,
-        currentLocation: editedProduct.location,
-        category: editedProduct.category,
+      setLoading(true);
+      setError(null);
+      const productData = {
+        product: {
+          sku: editedProduct.sku,
+          weight: editedProduct.weight,
+          storage_temperature: editedProduct.storageTemperature,
+          required_temperature: editedProduct.requiredTemperature,
+          length: editedProduct.length !== undefined && editedProduct.length !== "" ? Number(editedProduct.length) : null,
+          width: editedProduct.width !== undefined && editedProduct.width !== "" ? Number(editedProduct.width) : null,
+          height: editedProduct.height !== undefined && editedProduct.height !== "" ? Number(editedProduct.height) : null,
+          number_of_boxes: editedProduct.numberOfBoxes || 1
+        }
       };
-
-      const updatedProducts = products.map((product) =>
-        product.id === editedProduct.id ? updatedProduct : product
-      );
-
-      setProducts(updatedProducts);
-      localStorage.setItem("products", JSON.stringify(updatedProducts));
+      await productsService.updateProduct(editedProduct.id, productData);
+      // Refetch products
+      const response = await productsService.getProducts();
+      setProducts(Array.isArray(response.products) ? response.products : []);
       setIsEditing(false);
       setEditingProduct(null);
     } catch (error) {
-      console.error("Error updating product:", error);
+      setError("Failed to update product.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -309,17 +258,9 @@ function Products({ onProductSelect, isSelectionMode = false }) {
 
   // Filter and search logic
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = Object.values(product).some((value) =>
+    return Object.values(product).some((value) =>
       value.toString().toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    const matchesFilters =
-      (filters.category === "All" || product.category === filters.category) &&
-      (filters.location === "All" ||
-        product.currentLocation === filters.location) &&
-      (filters.boxType === "All" || product.boxType === filters.boxType);
-
-    return matchesSearch && matchesFilters;
   });
 
   // Pagination
@@ -327,6 +268,17 @@ function Products({ onProductSelect, isSelectionMode = false }) {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  // Get current user role from localStorage
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.role;
+
+  if (loading) {
+    return <div className="products-container">Loading...</div>;
+  }
+  if (error) {
+    return <div className="products-container">{error}</div>;
+  }
 
   if (isEditing) {
     return (
@@ -378,10 +330,10 @@ function Products({ onProductSelect, isSelectionMode = false }) {
         </Button>
       </div>
 
-      {/* Filters and Search Section */}
+      {/* Search Section */}
       <Card className="filters-card">
-        <Grid container spacing={3} className="filters-grid">
-          <Grid item xs={12} md={4}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
               placeholder="Search products..."
@@ -397,29 +349,6 @@ function Products({ onProductSelect, isSelectionMode = false }) {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={8}>
-            <div className="filters-container">
-              {filterConfig.map(({ id, label, options }) => (
-                <FormControl key={id} className="filter-select">
-                  <InputLabel id={`${id}-label`}>{label}</InputLabel>
-                  <Select
-                    labelId={`${id}-label`}
-                    id={id}
-                    value={filters[id]}
-                    label={label}
-                    onChange={(e) => handleFilterChange(id, e.target.value)}
-                    size="small"
-                  >
-                    {options.map((option) => (
-                      <MenuItem key={option} value={option}>
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              ))}
-            </div>
-          </Grid>
         </Grid>
       </Card>
 
@@ -430,14 +359,13 @@ function Products({ onProductSelect, isSelectionMode = false }) {
             <TableHead>
               <TableRow>
                 <TableCell>Product ID</TableCell>
-                <TableCell>SKU Name</TableCell>
+                <TableCell>SKU</TableCell>
+                <TableCell>Weight</TableCell>
                 <TableCell>Dimensions</TableCell>
-                <TableCell>Weight (kg)</TableCell>
-                <TableCell>Min-Max Temperature</TableCell>
                 <TableCell>Number of Boxes</TableCell>
-                <TableCell>Box Type</TableCell>
-                <TableCell>Current Location</TableCell>
-                <TableCell>Category</TableCell>
+                {currentUserRole === "super_admin" && <TableCell>Organization</TableCell>}
+                <TableCell>Storage Temp</TableCell>
+                <TableCell>Required Temp</TableCell>
                 {!isSelectionMode && (
                   <TableCell align="right">Actions</TableCell>
                 )}
@@ -458,14 +386,34 @@ function Products({ onProductSelect, isSelectionMode = false }) {
                   className={isSelectionMode ? "selectable-row" : ""}
                 >
                   <TableCell>{product.id}</TableCell>
-                  <TableCell>{product.skuName}</TableCell>
-                  <TableCell>{formatDimensions(product.dimensions)}</TableCell>
+                  <TableCell>{product.sku}</TableCell>
                   <TableCell>{product.weight}</TableCell>
-                  <TableCell>{product.temperature}</TableCell>
-                  <TableCell>{product.numberOfBoxes}</TableCell>
-                  <TableCell>{product.boxType}</TableCell>
-                  <TableCell>{product.currentLocation}</TableCell>
-                  <TableCell>{product.category}</TableCell>
+                  <TableCell>
+                    {product.length && product.width && product.height
+                      ? `${product.length}x${product.width}x${product.height}`
+                      : "-"}
+                  </TableCell>
+                  <TableCell>{product.number_of_boxes || 1}</TableCell>
+                  {currentUserRole === "super_admin" && (
+                    <TableCell>{product.organization?.name || ""}</TableCell>
+                  )}
+                  <TableCell>
+                    {product.storage_temperature
+                      ? (typeof product.storage_temperature === "string"
+                          ? product.storage_temperature.charAt(0).toUpperCase() + product.storage_temperature.slice(1)
+                          : ["Ambient", "Chilled", "Frozen"][product.storage_temperature])
+                      : "-"}
+                    {product.required_temperature !== null && product.required_temperature !== undefined
+                      ? ` / ${product.required_temperature}°C`
+                      : ""}
+                  </TableCell>
+                  <TableCell>
+                    {product.required_temperature
+                      ? (typeof product.required_temperature === "string"
+                          ? product.required_temperature.charAt(0).toUpperCase() + product.required_temperature.slice(1)
+                          : ["Ambient", "Chilled", "Frozen"][product.required_temperature])
+                      : "-"}
+                  </TableCell>
                   {!isSelectionMode && (
                     <TableCell align="right">
                       <IconButton
@@ -526,6 +474,7 @@ function Products({ onProductSelect, isSelectionMode = false }) {
 
 // NewProductCard Component
 function NewProductCard({ onCancel, onProductAdded }) {
+  const { user } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     sku: "",
     length: "",
@@ -533,15 +482,27 @@ function NewProductCard({ onCancel, onProductAdded }) {
     height: "",
     weight: "",
     numberOfBoxes: "1",
-    minMaxTemp: false,
-    minTemp: "",
-    maxTemp: "",
-    boxType: "",
-    location: "",
-    category: "",
+    storageTemperature: 0,
+    requiredTemperature: null,
+    ...(user?.role === 'super_admin' && { organizationId: "" })
   });
+  const [organizations, setOrganizations] = useState([]);
   const [tempError, setTempError] = useState("");
   const [boxesError, setBoxesError] = useState("");
+
+  useEffect(() => {
+    if (user?.role === 'super_admin') {
+      const fetchOrganizations = async () => {
+        try {
+          const response = await organizationsService.getOrganizations();
+          setOrganizations(response.organizations || []);
+        } catch (error) {
+          console.error("Error fetching organizations:", error);
+        }
+      };
+      fetchOrganizations();
+    }
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { id, value, type, checked } = e.target;
@@ -560,39 +521,11 @@ function NewProductCard({ onCancel, onProductAdded }) {
       return;
     }
 
-    if (id === "minTemp" || id === "maxTemp") {
-      const newValue = value === "" ? "" : Number(value);
-      const otherTemp = id === "minTemp" ? "maxTemp" : "minTemp";
-      const otherValue =
-        formData[otherTemp] === "" ? "" : Number(formData[otherTemp]);
-
+    if (id === "storageTemperature") {
       setFormData((prev) => ({
         ...prev,
-        [id]: newValue,
+        [id]: Number(value),
       }));
-
-      // Validate temperature range
-      if (
-        id === "minTemp" &&
-        otherValue !== "" &&
-        newValue !== "" &&
-        newValue > otherValue
-      ) {
-        setTempError(
-          "Minimum temperature cannot be greater than maximum temperature"
-        );
-      } else if (
-        id === "maxTemp" &&
-        otherValue !== "" &&
-        newValue !== "" &&
-        newValue < otherValue
-      ) {
-        setTempError(
-          "Maximum temperature cannot be less than minimum temperature"
-        );
-      } else {
-        setTempError("");
-      }
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -619,31 +552,12 @@ function NewProductCard({ onCancel, onProductAdded }) {
       return;
     }
 
-    // Final validation before submit
-    if (formData.minMaxTemp) {
-      const minTemp = Number(formData.minTemp);
-      const maxTemp = Number(formData.maxTemp);
-
-      if (minTemp > maxTemp) {
-        setTempError(
-          "Minimum temperature cannot be greater than maximum temperature"
-        );
-        return;
-      }
-    }
-
     if (tempError || boxesError) {
       return;
     }
 
-    // Format temperature based on whether min/max temp is enabled
-    const temperature = formData.minMaxTemp
-      ? `${formData.minTemp}°C - ${formData.maxTemp}°C`
-      : "N/A";
-
     onProductAdded({
       ...formData,
-      temperature,
       numberOfBoxes: Number(formData.numberOfBoxes),
     });
   };
@@ -656,12 +570,9 @@ function NewProductCard({ onCancel, onProductAdded }) {
       height: "",
       weight: "",
       numberOfBoxes: "1",
-      minMaxTemp: false,
-      minTemp: "",
-      maxTemp: "",
-      boxType: "",
-      location: "",
-      category: "",
+      storageTemperature: 0,
+      requiredTemperature: null,
+      ...(user?.role === 'super_admin' && { organizationId: "" })
     });
     setBoxesError("");
     onCancel();
@@ -671,6 +582,28 @@ function NewProductCard({ onCancel, onProductAdded }) {
     <div className="product-container">
       <form className="new-product-card" onSubmit={handleSubmit}>
         <h1 className="product-title">Add new product</h1>
+
+        {user?.role === 'super_admin' && (
+          <div className="add-new-product-form-group">
+            <label htmlFor="organizationId" className="product-label">
+              Organization
+            </label>
+            <select
+              id="organizationId"
+              className="product-select"
+              value={formData.organizationId}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="">Select Organization</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="add-new-product-form-group">
           <label htmlFor="sku" className="product-label">
@@ -753,124 +686,33 @@ function NewProductCard({ onCancel, onProductAdded }) {
         </div>
 
         <div className="add-new-product-form-group">
-          <div className="product-checkbox-container">
-            <input
-              type="checkbox"
-              id="minMaxTemp"
-              checked={formData.minMaxTemp}
-              onChange={handleInputChange}
-              className="product-checkbox"
-            />
-            <label htmlFor="minMaxTemp" className="product-checkbox-label">
-              MIN/MAX Temp.
-            </label>
-          </div>
-        </div>
-
-        {formData.minMaxTemp && (
-          <div className="product-temp-range">
-            <div className="add-new-product-form-group">
-              <label className="product-label">FROM</label>
-              <input
-                id="minTemp"
-                type="number"
-                className={`product-input-field product-temp-input ${
-                  tempError ? "error" : ""
-                }`}
-                value={formData.minTemp}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="add-new-product-form-group">
-              <label className="product-label">TO</label>
-              <input
-                id="maxTemp"
-                type="number"
-                className={`product-input-field product-temp-input ${
-                  tempError ? "error" : ""
-                }`}
-                value={formData.maxTemp}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            {tempError && (
-              <div
-                className="error-message"
-                style={{ gridColumn: "1 / -1", marginTop: "8px" }}
-              >
-                {tempError}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="boxType" className="product-label">
-            Box Type
+          <label htmlFor="storageTemperature" className="product-label">
+            Storage Temperature
           </label>
-          <div className="product-select-wrapper">
-            <select
-              id="boxType"
-              className="product-select-field"
-              value={formData.boxType}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select box type
-              </option>
-              <option value="Standard">Standard</option>
-              <option value="Custom">Custom</option>
-              <option value="Special">Special</option>
-            </select>
-          </div>
+          <select
+            id="storageTemperature"
+            value={formData.storageTemperature}
+            onChange={handleInputChange}
+            className="product-select"
+            required
+          >
+            <option value={0}>Ambient</option>
+            <option value={1}>Chilled</option>
+            <option value={2}>Frozen</option>
+          </select>
         </div>
 
         <div className="add-new-product-form-group">
-          <label htmlFor="location" className="product-label">
-            Current Location
+          <label htmlFor="requiredTemperature" className="product-label">
+            Required Temperature
           </label>
-          <div className="product-select-wrapper">
-            <select
-              id="location"
-              className="product-select-field"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select location
-              </option>
-              <option value="Warehouse 1">Warehouse 1</option>
-              <option value="Warehouse 2">Warehouse 2</option>
-              <option value="Store">Store</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="category" className="product-label">
-            Category
-          </label>
-          <div className="product-select-wrapper">
-            <select
-              id="category"
-              className="product-select-field"
-              value={formData.category}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select category
-              </option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Food">Food</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+          <input
+            id="requiredTemperature"
+            type="number"
+            className="product-input-field"
+            value={formData.requiredTemperature || ""}
+            onChange={handleInputChange}
+          />
         </div>
 
         <div className="product-actions">
@@ -901,39 +743,11 @@ function EditProductCard({ product, onCancel, onEditSubmit }) {
   const handleInputChange = (e) => {
     const { id, value, type, checked } = e.target;
 
-    if (id === "minTemp" || id === "maxTemp") {
-      const newValue = value === "" ? "" : Number(value);
-      const otherTemp = id === "minTemp" ? "maxTemp" : "minTemp";
-      const otherValue =
-        formData[otherTemp] === "" ? "" : Number(formData[otherTemp]);
-
+    if (id === "storageTemperature") {
       setFormData((prev) => ({
         ...prev,
-        [id]: newValue,
+        [id]: Number(value),
       }));
-
-      // Validate temperature range
-      if (
-        id === "minTemp" &&
-        otherValue !== "" &&
-        newValue !== "" &&
-        newValue > otherValue
-      ) {
-        setTempError(
-          "Minimum temperature cannot be greater than maximum temperature"
-        );
-      } else if (
-        id === "maxTemp" &&
-        otherValue !== "" &&
-        newValue !== "" &&
-        newValue < otherValue
-      ) {
-        setTempError(
-          "Maximum temperature cannot be less than minimum temperature"
-        );
-      } else {
-        setTempError("");
-      }
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -952,19 +766,6 @@ function EditProductCard({ product, onCancel, onEditSubmit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Final validation before submit
-    if (formData.minMaxTemp) {
-      const minTemp = Number(formData.minTemp);
-      const maxTemp = Number(formData.maxTemp);
-
-      if (minTemp > maxTemp) {
-        setTempError(
-          "Minimum temperature cannot be greater than maximum temperature"
-        );
-        return;
-      }
-    }
 
     if (tempError) {
       return;
@@ -1056,124 +857,33 @@ function EditProductCard({ product, onCancel, onEditSubmit }) {
         </div>
 
         <div className="add-new-product-form-group">
-          <div className="product-checkbox-container">
-            <input
-              type="checkbox"
-              id="minMaxTemp"
-              checked={formData.minMaxTemp}
-              onChange={handleInputChange}
-              className="product-checkbox"
-            />
-            <label htmlFor="minMaxTemp" className="product-checkbox-label">
-              MIN/MAX Temp.
-            </label>
-          </div>
-        </div>
-
-        {formData.minMaxTemp && (
-          <div className="product-temp-range">
-            <div className="add-new-product-form-group">
-              <label className="product-label">FROM</label>
-              <input
-                id="minTemp"
-                type="number"
-                className={`product-input-field product-temp-input ${
-                  tempError ? "error" : ""
-                }`}
-                value={formData.minTemp}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="add-new-product-form-group">
-              <label className="product-label">TO</label>
-              <input
-                id="maxTemp"
-                type="number"
-                className={`product-input-field product-temp-input ${
-                  tempError ? "error" : ""
-                }`}
-                value={formData.maxTemp}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            {tempError && (
-              <div
-                className="error-message"
-                style={{ gridColumn: "1 / -1", marginTop: "8px" }}
-              >
-                {tempError}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="boxType" className="product-label">
-            Box Type
+          <label htmlFor="storageTemperature" className="product-label">
+            Storage Temperature
           </label>
-          <div className="product-select-wrapper">
-            <select
-              id="boxType"
-              className="product-select-field"
-              value={formData.boxType}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select box type
-              </option>
-              <option value="Standard">Standard</option>
-              <option value="Custom">Custom</option>
-              <option value="Special">Special</option>
-            </select>
-          </div>
+          <select
+            id="storageTemperature"
+            value={formData.storageTemperature}
+            onChange={handleInputChange}
+            className="product-select"
+            required
+          >
+            <option value={0}>Ambient</option>
+            <option value={1}>Chilled</option>
+            <option value={2}>Frozen</option>
+          </select>
         </div>
 
         <div className="add-new-product-form-group">
-          <label htmlFor="location" className="product-label">
-            Current Location
+          <label htmlFor="requiredTemperature" className="product-label">
+            Required Temperature
           </label>
-          <div className="product-select-wrapper">
-            <select
-              id="location"
-              className="product-select-field"
-              value={formData.location}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select location
-              </option>
-              <option value="Warehouse 1">Warehouse 1</option>
-              <option value="Warehouse 2">Warehouse 2</option>
-              <option value="Store">Store</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="add-new-product-form-group">
-          <label htmlFor="category" className="product-label">
-            Category
-          </label>
-          <div className="product-select-wrapper">
-            <select
-              id="category"
-              className="product-select-field"
-              value={formData.category}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="" disabled>
-                Select category
-              </option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Food">Food</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+          <input
+            id="requiredTemperature"
+            type="number"
+            className="product-input-field"
+            value={formData.requiredTemperature || ""}
+            onChange={handleInputChange}
+          />
         </div>
 
         <div className="product-actions">

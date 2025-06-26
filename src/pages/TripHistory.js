@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -30,6 +30,8 @@ import PersonIcon from "@mui/icons-material/Person";
 import ScaleIcon from "@mui/icons-material/Scale";
 import CategoryIcon from "@mui/icons-material/Category";
 import "../styles/TripHistory.css";
+import { tripsService } from "../services/trips";
+import api from "../services/api";
 
 // Helper function for status colors
 const getStatusColor = (status) => {
@@ -47,14 +49,61 @@ const getStatusColor = (status) => {
 
 // Trip Details Card Component
 function TripDetailsCard({ trip, onClose }) {
-  const [showOrders, setShowOrders] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [ordersError, setOrdersError] = useState(null);
+  const [editStatus, setEditStatus] = useState(trip.status);
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [statusMsg, setStatusMsg] = useState("");
 
-  const handleViewOrders = () => {
-    setShowOrders(true);
-  };
+  useEffect(() => {
+    setEditStatus(trip.status);
+  }, [trip.status]);
 
-  const handleCloseOrders = () => {
-    setShowOrders(false);
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoadingOrders(true);
+      setOrdersError(null);
+      try {
+        const response = await api.get("/orders", { params: { trip_id: trip.id } });
+        setOrders(Array.isArray(response.data.orders) ? response.data.orders : []);
+      } catch (err) {
+        setOrdersError("Failed to load orders for this trip.");
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+    fetchOrders();
+  }, [trip.id]);
+
+  // Compute summary fields
+  const firstOrder = orders[0] || {};
+  const departureDate = firstOrder.delivery_deadline ? firstOrder.delivery_deadline.slice(0, 10) : '-';
+  const weight = orders.reduce((sum, o) => sum + (parseFloat(o.total_weight) || 0), 0);
+  const assignedCar = trip.vehicle?.plate_number || '-';
+
+  const handleStatusSave = async () => {
+    setSavingStatus(true);
+    setStatusMsg("");
+    try {
+      // Fetch full trip details
+      const response = await api.get(`/trips/${trip.id}`);
+      const fullTrip = response.data.trip || response.data;
+      await api.patch(`/trips/${trip.id}`, {
+        trip: {
+          name: fullTrip.name,
+          start_time: fullTrip.start_time,
+          end_time: fullTrip.end_time,
+          scheduled_date: fullTrip.scheduled_date,
+          status: editStatus
+        }
+      });
+      setStatusMsg("Status updated successfully.");
+    } catch (err) {
+      setStatusMsg("Failed to update status.");
+    } finally {
+      setSavingStatus(false);
+    }
   };
 
   return (
@@ -65,277 +114,115 @@ function TripDetailsCard({ trip, onClose }) {
           Back to Trip History
         </button>
         <Typography variant="h4" className="trip-details-title">
-          Trip Data
+          Trip Details
         </Typography>
       </div>
-
       <div className="trip-details-card">
-        <div className="trip-details-card-header">
-          <div className="trip-details-card-title">
-            <Typography variant="h6">Trip Information</Typography>
-            <Chip
-              label={trip.status}
-              color={getStatusColor(trip.status)}
-              size="small"
-              className="status-chip"
-            />
-          </div>
-          <Typography variant="subtitle2" className="trip-id">
-            {trip.id}
-          </Typography>
-        </div>
-
         <Grid container spacing={3} className="trip-details-content">
           <Grid item xs={12} md={6}>
             <div className="trip-details-section">
               <div className="trip-info-grid">
                 <div className="info-item">
-                  <div className="info-label">
-                    <PersonIcon fontSize="small" />
-                    <Typography variant="body2">Customer</Typography>
-                  </div>
+                  <Typography variant="body2">Trip ID</Typography>
+                  <Typography variant="body1" className="info-value">{trip.id}</Typography>
+                </div>
+                <div className="info-item">
+                  <Typography variant="body2">Departure Date</Typography>
                   <Typography variant="body1" className="info-value">
-                    {trip.customer}
+                    {departureDate}
                   </Typography>
                 </div>
                 <div className="info-item">
-                  <div className="info-label">
-                    <CategoryIcon fontSize="small" />
-                    <Typography variant="body2">Type</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {trip.type}
-                  </Typography>
+                  <Typography variant="body2">Weight</Typography>
+                  <Typography variant="body1" className="info-value">{weight}</Typography>
                 </div>
                 <div className="info-item">
-                  <div className="info-label">
-                    <LocalShippingIcon fontSize="small" />
-                    <Typography variant="body2">Assigned Vehicle</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {trip.assignedVehicle || "Vehicle 123"}
-                  </Typography>
+                  <Typography variant="body2">Assigned Car</Typography>
+                  <Typography variant="body1" className="info-value">{assignedCar}</Typography>
                 </div>
                 <div className="info-item">
-                  <div className="info-label">
-                    <AccessTimeIcon fontSize="small" />
-                    <Typography variant="body2">Pickup Date & Time</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {trip.pickupDateTime || "2024-03-14 10:00 AM"}
-                  </Typography>
-                </div>
-                <div className="info-item">
-                  <div className="info-label">
-                    <AccessTimeIcon fontSize="small" />
-                    <Typography variant="body2">Arrival Date & Time</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {new Date(trip.arrivalDate).toLocaleString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Typography>
-                </div>
-                <div className="info-item">
-                  <div className="info-label">
-                    <Typography variant="body2">Orders in Trip</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {trip.ordersInTrip || 5}
-                  </Typography>
-                  <Button variant="outlined" onClick={handleViewOrders}>
-                    View Orders
+                  <Typography variant="body2">Status</Typography>
+                  <select
+                    value={editStatus}
+                    onChange={e => setEditStatus(e.target.value)}
+                    style={{ marginLeft: 8, padding: 4, borderRadius: 4 }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    onClick={handleStatusSave}
+                    disabled={savingStatus || editStatus === trip.status}
+                    style={{ marginLeft: 8 }}
+                  >
+                    {savingStatus ? "Saving..." : "Save"}
                   </Button>
-                </div>
-              </div>
-            </div>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <div className="trip-details-section">
-              <div className="location-info">
-                <div className="location-item">
-                  <div className="location-label">
-                    <LocationOnIcon fontSize="small" />
-                    <Typography variant="body2">Departure</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {trip.departure}
-                  </Typography>
-                </div>
-                <div className="location-item">
-                  <div className="location-label">
-                    <LocationOnIcon fontSize="small" />
-                    <Typography variant="body2">Arrival Location</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {trip.arrivalLocation}
-                  </Typography>
-                </div>
-                <div className="location-item">
-                  <div className="location-label">
-                    <AccessTimeIcon fontSize="small" />
-                    <Typography variant="body2">Arrival Date</Typography>
-                  </div>
-                  <Typography variant="body1" className="info-value">
-                    {new Date(trip.arrivalDate).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </Typography>
+                  {statusMsg && (
+                    <span style={{ marginLeft: 8, color: statusMsg.includes("success") ? 'green' : 'red' }}>{statusMsg}</span>
+                  )}
                 </div>
               </div>
             </div>
           </Grid>
         </Grid>
       </div>
-
-      {showOrders && (
         <div className="orders-floating-card">
-          <Button onClick={handleCloseOrders} className="close-orders-button">
-            X
-          </Button>
-          <Typography variant="h6">Orders</Typography>
+        <Typography variant="h6">Orders in this Trip</Typography>
+        {loadingOrders ? (
+          <div>Loading orders...</div>
+        ) : ordersError ? (
+          <div style={{ color: 'red' }}>{ordersError}</div>
+        ) : (
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Product</TableCell>
-                  <TableCell>Product ID</TableCell>
+                  <TableCell>Order ID</TableCell>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>Pickup Location</TableCell>
+                  <TableCell>Dropoff Location</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Weight</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {trip.orders.map((order, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{order.product}</TableCell>
-                    <TableCell>{order.productId}</TableCell>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>{order.id}</TableCell>
+                    <TableCell>{order.customer_name || '-'}</TableCell>
+                    <TableCell>{order.pickup_location?.name || '-'}</TableCell>
+                    <TableCell>{order.delivery_location?.name || '-'}</TableCell>
+                    <TableCell>{order.status}</TableCell>
+                    <TableCell>{order.total_weight}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+        )}
         </div>
-      )}
     </div>
   );
 }
 
-// Mock data for trips - shared between Dashboard and TripHistory
-export const mockTripHistory = [
-  {
-    id: "TRIP001",
-    status: "Completed",
-    customer: "John Smith",
-    departure: "New York Warehouse",
-    type: "Inbound",
-    weight: "500 kg",
-    arrivalLocation: "Boston Distribution Center",
-    arrivalDate: "2024-03-15",
-    assignedVehicle: "Truck 001",
-    pickupDateTime: "2024-03-14 08:00 AM",
-    ordersInTrip: 3,
-    orders: [
-      { product: "Product A", productId: "PA001" },
-      { product: "Product B", productId: "PB002" },
-      { product: "Product C", productId: "PC003" },
-    ],
-  },
-  {
-    id: "TRIP002",
-    status: "In Progress",
-    customer: "Sarah Johnson",
-    departure: "Chicago Hub",
-    type: "Outbound",
-    weight: "750 kg",
-    arrivalLocation: "Detroit Facility",
-    arrivalDate: "2024-03-16",
-    assignedVehicle: "Van 002",
-    pickupDateTime: "2024-03-15 09:00 AM",
-    ordersInTrip: 2,
-    orders: [
-      { product: "Product D", productId: "PD004" },
-      { product: "Product E", productId: "PE005" },
-    ],
-  },
-  {
-    id: "TRIP003",
-    status: "Cancelled",
-    customer: "Mike Brown",
-    departure: "Los Angeles Depot",
-    type: "Inbound",
-    weight: "300 kg",
-    arrivalLocation: "San Francisco Center",
-    arrivalDate: "2024-03-14",
-    assignedVehicle: "Truck 003",
-    pickupDateTime: "2024-03-13 07:30 AM",
-    ordersInTrip: 4,
-    orders: [
-      { product: "Product F", productId: "PF006" },
-      { product: "Product G", productId: "PG007" },
-      { product: "Product H", productId: "PH008" },
-      { product: "Product I", productId: "PI009" },
-    ],
-  },
-  {
-    id: "TRIP004",
-    status: "Completed",
-    customer: "Emily Davis",
-    departure: "Miami Port",
-    type: "Outbound",
-    weight: "600 kg",
-    arrivalLocation: "Orlando Hub",
-    arrivalDate: "2024-03-13",
-    assignedVehicle: "Truck 004",
-    pickupDateTime: "2024-03-12 10:00 AM",
-    ordersInTrip: 3,
-    orders: [
-      { product: "Product J", productId: "PJ010" },
-      { product: "Product K", productId: "PK011" },
-      { product: "Product L", productId: "PL012" },
-    ],
-  },
-  {
-    id: "TRIP005",
-    status: "In Progress",
-    customer: "David Wilson",
-    departure: "Seattle Terminal",
-    type: "Inbound",
-    weight: "450 kg",
-    arrivalLocation: "Portland Center",
-    arrivalDate: "2024-03-17",
-    assignedVehicle: "Van 005",
-    pickupDateTime: "2024-03-16 08:30 AM",
-    ordersInTrip: 2,
-    orders: [
-      { product: "Product M", productId: "PM013" },
-      { product: "Product N", productId: "PN014" },
-    ],
-  },
-  {
-    id: "TRIP006",
-    status: "Completed",
-    customer: "Lisa Anderson",
-    departure: "Denver Hub",
-    type: "Outbound",
-    weight: "550 kg",
-    arrivalLocation: "Salt Lake City",
-    arrivalDate: "2024-03-12",
-    assignedVehicle: "Truck 006",
-    pickupDateTime: "2024-03-11 09:15 AM",
-    ordersInTrip: 4,
-    orders: [
-      { product: "Product O", productId: "PO015" },
-      { product: "Product P", productId: "PP016" },
-      { product: "Product Q", productId: "PQ017" },
-      { product: "Product R", productId: "PR018" },
-    ],
-  },
-];
+// Add this mapping function before the TripHistory component
+function mapTripData(trip) {
+  const orders = trip.orders || [];
+  const firstOrder = orders[0] || {};
+  return {
+    id: trip.id,
+    status: trip.status || '-',
+    departureDate: firstOrder.delivery_deadline ? firstOrder.delivery_deadline.slice(0, 10) : '-',
+    weight: orders.reduce((sum, o) => sum + (parseFloat(o.total_weight) || 0), 0),
+    assignedCar: trip.vehicle?.plate_number || '-',
+    raw: trip
+  };
+}
 
 export default function TripHistory() {
   const [page, setPage] = useState(0);
@@ -344,7 +231,25 @@ export default function TripHistory() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [showTripDetails, setShowTripDetails] = useState(false);
-  const [tripHistory, setTripHistory] = useState(mockTripHistory);
+  const [tripHistory, setTripHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const tripsResponse = await tripsService.getTrips();
+        setTripHistory(Array.isArray(tripsResponse?.trips) ? tripsResponse.trips : []);
+      } catch (err) {
+        setError("Failed to load trip history.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -372,11 +277,11 @@ export default function TripHistory() {
   // Filter trips based on search query
   const filteredTrips = tripHistory.filter(
     (trip) =>
-      trip.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      trip.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      trip.departure.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      trip.arrivalLocation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      trip.type.toLowerCase().includes(searchQuery.toLowerCase())
+      (trip.id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
+      (trip.customer?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
+      (trip.departure?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
+      (trip.arrivalLocation?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
+      (trip.type?.toLowerCase().includes(searchQuery.toLowerCase()) || "")
   );
 
   const handleViewDetails = (trip) => {
@@ -384,13 +289,23 @@ export default function TripHistory() {
     setShowTripDetails(true);
   };
 
-  const handleDeleteTrip = (tripId) => {
-    const updatedTrips = tripHistory.filter((trip) => trip.id !== tripId);
-    // Update the state with the filtered trips
-    setTripHistory(updatedTrips);
-    // Optionally, update persistent storage if needed
-    console.log(`Deleted trip with ID: ${tripId}`);
+  const handleDeleteTrip = async (tripId) => {
+    try {
+      await api.delete(`/trips/${tripId}`);
+      // Refetch trips from backend after deletion
+      const tripsResponse = await tripsService.getTrips();
+      setTripHistory(Array.isArray(tripsResponse?.trips) ? tripsResponse.trips : []);
+    } catch (err) {
+      alert("Failed to delete trip. Please try again.");
+    }
   };
+
+  if (loading) {
+    return <div className="trip-history-container">Loading...</div>;
+  }
+  if (error) {
+    return <div className="trip-history-container">{error}</div>;
+  }
 
   if (showTripDetails && selectedTrip) {
     return (
@@ -435,49 +350,31 @@ export default function TripHistory() {
             <TableRow>
               <TableCell>Trip ID</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Customer</TableCell>
-              <TableCell>Departure</TableCell>
-              <TableCell>Type</TableCell>
+              <TableCell>Departure Date</TableCell>
               <TableCell>Weight</TableCell>
-              <TableCell>Arrival Location</TableCell>
-              <TableCell>Arrival Date</TableCell>
+              <TableCell>Assigned Car</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredTrips
+              .map(mapTripData)
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((trip) => (
                 <TableRow key={trip.id}>
                   <TableCell>
-                    <Button onClick={() => handleViewDetails(trip)}>
+                    <Button onClick={() => handleViewDetails(trip.raw)}>
                       {trip.id}
                     </Button>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={trip.status}
-                      color={getStatusColor(trip.status)}
-                      size="small"
-                      className="status-chip"
-                    />
+                    <span className={`status-badge status-${trip.status}`}>{trip.status}</span>
                   </TableCell>
                   <TableCell>
-                    <Box className="trip-customer-cell">
-                      <Typography variant="body1">{trip.customer}</Typography>
-                    </Box>
+                    {trip.departureDate}
                   </TableCell>
-                  <TableCell>{trip.departure}</TableCell>
-                  <TableCell>{trip.type}</TableCell>
                   <TableCell>{trip.weight}</TableCell>
-                  <TableCell>{trip.arrivalLocation}</TableCell>
-                  <TableCell>
-                    {new Date(trip.arrivalDate).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </TableCell>
+                  <TableCell>{trip.assignedCar}</TableCell>
                   <TableCell align="right">
                     <Button
                       variant="outlined"

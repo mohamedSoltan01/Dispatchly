@@ -3,162 +3,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Dashboard.css";
-import { mockTripHistory } from "./TripHistory";
-
-// Dashboard data
-const dashboardData = {
-  cargoOrders: [
-    { id: "ORDERID01", progress: 20, from: "Alex", to: "Cairo" },
-    { id: "ORDERID02", progress: 40, from: "Luxor", to: "Tanta" },
-    { id: "ORDERID03", progress: 40, from: "Cairo", to: "Alex" },
-    { id: "ORDERID04", progress: 90, from: "Tanta", to: "Cairo" },
-    { id: "ORDERID05", progress: 40, from: "Alex", to: "Cairo" },
-  ],
-
-  ordersHistory: [
-    {
-      id: "ORDERID05",
-      status: "Delivered",
-      customer: "Juhayna",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Cairo",
-      date: "17 Dec 2024",
-    },
-    {
-      id: "ORDERID06",
-      status: "Canceled",
-      customer: "Arab Dairy",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Tanta",
-      date: "17 Dec 2024",
-    },
-    {
-      id: "ORDERID07",
-      status: "Active",
-      customer: "Nestle Egypt",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Alexandria",
-      date: "17 Dec 2024",
-    },
-    {
-      id: "ORDERID08",
-      status: "Delivered",
-      customer: "Edita",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Cairo",
-      date: "16 Dec 2024",
-    },
-    {
-      id: "ORDERID09",
-      status: "Delivered",
-      customer: "Almarai Egypt",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Cairo",
-      date: "16 Dec 2024",
-    },
-    {
-      id: "ORDERID10",
-      status: "Active",
-      customer: "Coca-Cola Egypt",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Luxor",
-      date: "16 Dec 2024",
-    },
-    {
-      id: "ORDERID11",
-      status: "Active",
-      customer: "Americana Group",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Aswan",
-      date: "16 Dec 2024",
-    },
-    {
-      id: "ORDERID12",
-      status: "Delivered",
-      customer: "Bisco Misr",
-      departure: "Egypt",
-      weight: "250 KG",
-      arrival: "Alexandria",
-      date: "15 Dec 2024",
-    },
-  ],
-
-  todaysTrips: [
-    {
-      id: 1,
-      status: "Completed",
-      statusColor: "completed",
-      date: new Date().toISOString().split("T")[0],
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "14Kg",
-          time: "08:00 AM",
-        },
-        {
-          name: "Alexandria Hub",
-          address: "36 Khalid Basha St. Victoria",
-          type: "Dropoff",
-          weight: "14Kg",
-          time: "11:30 AM",
-        },
-      ],
-    },
-    {
-      id: 2,
-      status: "Ongoing",
-      statusColor: "ongoing",
-      date: new Date().toISOString().split("T")[0],
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "14Kg",
-          time: "09:00 AM",
-        },
-        {
-          name: "Alexandria Hub",
-          address: "36 Khalid Basha St. Victoria",
-          type: "Dropoff",
-          weight: "3Kg",
-          time: "12:30 PM",
-        },
-      ],
-    },
-    {
-      id: 3,
-      status: "Pending",
-      statusColor: "pending",
-      date: new Date().toISOString().split("T")[0],
-      locations: [
-        {
-          name: "Cairo Warehouse",
-          address: "17 Assem St., HELIOPOLIS",
-          type: "Pickup",
-          weight: "8Kg",
-          time: "10:00 AM",
-        },
-        {
-          name: "Giza Hub",
-          address: "25 Nile St., Giza",
-          type: "Dropoff",
-          weight: "8Kg",
-          time: "11:30 AM",
-        },
-      ],
-    },
-  ],
-};
+import { ordersService } from "../services/orders";
+import { tripsService } from "../services/trips";
+import { productsService } from "../services/products";
+import { vehiclesService } from "../services/vehicles";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import CircularProgress from '@mui/material/CircularProgress';
 
 // Section Header Component
 const SectionHeader = ({ title, hasViewAll = true, onViewAll, children }) => (
@@ -209,44 +59,44 @@ const getStoredProducts = () => {
 const CargoItem = ({ product }) => (
   <div className="card cargo-item fade-in">
     <div className="cargo-header">
-      <span className="cargo-id">{product.id}</span>
-      <span className="cargo-sku">{product.skuName}</span>
+      <span className="cargo-id">{product.sku}</span>
     </div>
     <div className="cargo-details">
       <div className="cargo-info">
         <div className="cargo-metric">
-          <span className="metric-label">Weight</span>
-          <span className="metric-value">{product.weight} kg</span>
+          <span className="metric-label">Number of Boxes</span>
+          <span className="metric-value">{product.number_of_boxes || 1}</span>
         </div>
-        <div className="cargo-metric">
-          <span className="metric-label">Location</span>
-          <span className="metric-value">{product.currentLocation}</span>
-        </div>
-      </div>
-      <div className="cargo-category">
-        <span className="category-badge">{product.category}</span>
       </div>
     </div>
   </div>
 );
 
-// Available Cargo Component
+// Available Cargo Component (uses real API)
 const AvailableCargo = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState(() => getStoredProducts());
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Update products when localStorage changes
-    const handleStorageChange = () => {
-      setProducts(getStoredProducts());
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await productsService.getProducts();
+        setProducts(Array.isArray(response.products) ? response.products.slice(0, 5) : []);
+      } catch (err) {
+        setError("Failed to load cargo products.");
+      } finally {
+        setLoading(false);
+      }
     };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    fetchProducts();
   }, []);
 
-  // Show only the first 4 products
-  const displayedProducts = products.slice(0, 4);
+  if (loading) return <div className="grid-item">Loading...</div>;
+  if (error) return <div className="grid-item">{error}</div>;
 
   return (
     <div className="grid-item">
@@ -254,8 +104,8 @@ const AvailableCargo = () => {
         title="Available Cargo"
         onViewAll={() => navigate("/products")}
       />
-      <div className="cargo-list">
-        {displayedProducts.map((product) => (
+      <div className="cargo-list" style={{ maxHeight: 200, overflowY: 'auto', paddingRight: 4 }}>
+        {products.map((product) => (
           <CargoItem key={product.id} product={product} />
         ))}
       </div>
@@ -263,65 +113,152 @@ const AvailableCargo = () => {
   );
 };
 
-// Truck Statistics Chart Component
-const TruckStatsChart = () => {
-  const stats = [
-    { label: "Active", value: 40, indicator: "active" },
-    { label: "Loading Delayed", value: 23, indicator: "loading-delayed" },
-    { label: "Ready to Load", value: 12, indicator: "ready-load" },
-    { label: "Unloading Delayed", value: 12, indicator: "unloading-delayed" },
-    { label: "Ready to Un-load", value: 3, indicator: "ready-unload" },
-    { label: "Canceled", value: 3, indicator: "canceled" },
-  ];
+// Helper function to describe an arc
+const describeArc = (cx, cy, r, startAngle, endAngle) => {
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  return [
+    "M", cx, cy,
+    "L", start.x, start.y,
+    "A", r, r, 0, largeArcFlag, 0, end.x, end.y,
+    "Z"
+  ].join(" ");
+};
+
+function polarToCartesian(cx, cy, r, angleInDegrees) {
+  var angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+  return {
+    x: cx + (r * Math.cos(angleInRadians)),
+    y: cy + (r * Math.sin(angleInRadians))
+  };
+}
+
+// Truck Statistics Chart Component (fetches real API data)
+const TruckStatsChart = ({ vehicles }) => {
+  // Count vehicles by status
+  const active = vehicles.filter(v => (v.status || '').toLowerCase() === 'active').length;
+  const inactive = vehicles.filter(v => (v.status || '').toLowerCase() === 'inactive').length;
+  const maintenance = vehicles.filter(v => (v.status || '').toLowerCase() === 'maintenance').length;
+  const total = active + inactive + maintenance;
+
+  // Calculate angles for each status
+  const activeAngle = total ? (active / total) * 360 : 0;
+  const inactiveAngle = total ? (inactive / total) * 360 : 0;
+  const maintenanceAngle = total ? (maintenance / total) * 360 : 0;
+
+  // Pie chart sectors
+  let startAngle = 0;
+  const sectors = [
+    { label: 'Active', value: active, color: '#059669', angle: activeAngle },
+    { label: 'Inactive', value: inactive, color: '#9ca3af', angle: inactiveAngle },
+    { label: 'Maintenance', value: maintenance, color: '#f59e42', angle: maintenanceAngle },
+  ].map((sector) => {
+    const endAngle = startAngle + sector.angle;
+    const path = describeArc(45, 45, 40, startAngle, endAngle);
+    const result = { ...sector, path, startAngle, endAngle };
+    startAngle = endAngle;
+    return result;
+  });
 
   return (
-    <div className="card truck-stats">
-      <div className="chart-container">
-        <div className="chart-wrapper">
-          <svg className="chart" viewBox="0 0 36 36">
-            <path
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="#e6f4ff"
-              strokeWidth="3"
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ position: 'relative', height: 90, width: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width={90} height={90} viewBox="0 0 90 90">
+          {sectors.map((sector, idx) => (
+            sector.value > 0 && (
+              <path
+                key={sector.label}
+                d={sector.path}
+                fill={sector.color}
+                stroke="#fff"
+                strokeWidth={1}
             />
-            <path
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="#001d66"
-              strokeWidth="3"
-              strokeDasharray="60, 40"
-            />
-          </svg>
-          <div className="chart-content">
-            <span className="chart-value">120</span>
-            <span className="chart-label">Total Trucks</span>
-          </div>
-        </div>
+            )
+          ))}
+        </svg>
       </div>
-
-      <div className="stats-grid">
-        {stats.map((stat, index) => (
-          <div key={index} className="stat-item">
-            <div className="stat-header">
-              <div className={`stat-indicator ${stat.indicator}`}></div>
-              <span>{stat.label}</span>
-            </div>
-            <span className="stat-value">{stat.value}</span>
-          </div>
-        ))}
+      <div style={{ fontSize: 24, fontWeight: 700, color: '#001d66', marginTop: 8 }}>
+        {vehicles.length}
       </div>
+      <div className="chart-label" style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginTop: 4 }}>Total Trucks</div>
     </div>
   );
 };
 
-// Loading Trucks Component
-const LoadingTrucks = () => (
-  <div className="grid-item">
-    <SectionHeader title="Loading Trucks" hasViewAll={false} />
-    <TruckStatsChart />
-  </div>
-);
+const LoadingTrucks = () => {
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await vehiclesService.getVehicles();
+        setVehicles(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError("Failed to load trucks.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVehicles();
+  }, []);
+
+  if (loading) return <div className="grid-item">Loading...</div>;
+  if (error) return <div className="grid-item">{error}</div>;
+
+  return (
+    <div className="grid-item" style={{ height: 'auto', alignSelf: 'flex-start' }}>
+      <div className="card truck-stats" style={{ padding: '36px 36px 0 36px', background: '#f8fafc', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 24, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ fontWeight: 600, fontSize: 22, color: '#111827', marginBottom: 24, textAlign: 'center' }}>Loading Trucks</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+          <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <TruckStatsChart vehicles={vehicles} />
+          </div>
+          <div className="stats-grid" style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            width: '100%', 
+            fontSize: 15, 
+            marginBottom: 0,
+            padding: '0 8px'
+          }}>
+            {[
+              { label: "Active", value: vehicles.filter(v => (v.status || '').toLowerCase() === 'active').length, color: "#059669" },
+              { label: "Inactive", value: vehicles.filter(v => (v.status || '').toLowerCase() === 'inactive').length, color: "#9ca3af" },
+              { label: "Maintenance", value: vehicles.filter(v => (v.status || '').toLowerCase() === 'maintenance').length, color: "#f59e42" },
+            ].map((stat, idx) => (
+              <div key={idx} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8,
+                flex: 1,
+                justifyContent: 'center'
+              }}>
+                <span style={{ 
+                  display: 'inline-block', 
+                  width: 12, 
+                  height: 12, 
+                  borderRadius: '50%', 
+                  background: stat.color,
+                  flexShrink: 0
+                }}></span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>{stat.label}</span>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>{stat.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Trip Item Component
 const TripItem = ({ trip, onViewDetails }) => (
@@ -329,20 +266,15 @@ const TripItem = ({ trip, onViewDetails }) => (
     <div className="trip-header">
       <div className="trip-id-container">
         <div className="trip-icon">🚛</div>
-        <span className="trip-id">Order {trip.id}</span>
+        <span className="trip-id">Trip {trip.id}</span>
       </div>
-      <span className={`status-badge status-${trip.statusColor}`}>
-        {trip.status}
-      </span>
+      <span className={`status-badge status-${trip.statusColor || trip.status?.toLowerCase()}`}>{trip.status}</span>
     </div>
-
     <div className="trip-details">
-      {trip.locations.map((location, idx) => (
+      {(trip.locations || []).map((location, idx) => (
         <div key={idx} className="location-item">
           <div className="location-header">
-            <div
-              className={`location-dot ${location.type.toLowerCase()}`}
-            ></div>
+            <div className={`location-dot ${location.type?.toLowerCase?.()}`}></div>
             <span>{location.type}</span>
           </div>
           <p className="location-address">{location.address}</p>
@@ -350,7 +282,6 @@ const TripItem = ({ trip, onViewDetails }) => (
         </div>
       ))}
     </div>
-
     <div className="trip-footer">
       <button
         className="link-button"
@@ -365,17 +296,36 @@ const TripItem = ({ trip, onViewDetails }) => (
   </div>
 );
 
-// Today's Trips Component
+// Today's Trips Component (uses real API)
 const TodaysTrips = () => {
   const navigate = useNavigate();
-  const today = new Date().toISOString().split("T")[0];
-  const todaysOrders = dashboardData.todaysTrips.filter(
-    (trip) => trip.date === today
-  );
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleViewDetails = (orderId) => {
-    navigate(`/todays-trips?order=${orderId}`);
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const today = new Date().toISOString().split("T")[0];
+        const allTripsResponse = await tripsService.getTrips({ date: today });
+        setTrips(Array.isArray(allTripsResponse?.trips) ? allTripsResponse.trips : []);
+      } catch (err) {
+        setError("Failed to load today's trips.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
+
+  const handleViewDetails = (tripId) => {
+    navigate(`/todays-trips?order=${tripId}`);
   };
+
+  if (loading) return <div className="grid-item">Loading...</div>;
+  if (error) return <div className="grid-item">{error}</div>;
 
   return (
     <div className="grid-item">
@@ -384,7 +334,7 @@ const TodaysTrips = () => {
         onViewAll={() => navigate("/todays-trips")}
       />
       <div className="trips-list">
-        {todaysOrders.map((trip) => (
+        {trips.map((trip) => (
           <TripItem
             key={trip.id}
             trip={trip}
@@ -410,19 +360,50 @@ const StatusBadge = ({ status }) => {
         return "";
     }
   };
-
   return (
     <span className={`status-badge ${getStatusClass(status)}`}>{status}</span>
   );
 };
 
-// Trip's History Component
+// Helper function to map trip data for the table (copied from TripHistory.js)
+function mapTripData(trip) {
+  const orders = trip.orders || [];
+  const firstOrder = orders[0] || {};
+  return {
+    id: trip.id,
+    status: trip.status || '-',
+    departureDate: firstOrder.delivery_deadline ? firstOrder.delivery_deadline.slice(0, 10) : '-',
+    weight: orders.reduce((sum, o) => sum + (parseFloat(o.total_weight) || 0), 0),
+    assignedCar: trip.vehicle?.plate_number || '-',
+    raw: trip
+  };
+}
+
+// Trip's History Component (uses real API)
 const TripsHistory = () => {
   const navigate = useNavigate();
-  const [tripHistory] = useState(mockTripHistory);
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Show only the first 5 trips
-  const displayedTrips = tripHistory.slice(0, 5);
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const allTripsResponse = await tripsService.getTrips();
+        setTrips(Array.isArray(allTripsResponse?.trips) ? allTripsResponse.trips.slice(0, 5) : []);
+      } catch (err) {
+        setError("Failed to load trip history.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
+
+  if (loading) return <div className="grid-item full-width">Loading...</div>;
+  if (error) return <div className="grid-item full-width">{error}</div>;
 
   return (
     <div className="grid-item full-width">
@@ -437,39 +418,117 @@ const TripsHistory = () => {
               <tr>
                 <th>TRIP ID</th>
                 <th>STATUS</th>
-                <th>CUSTOMER</th>
-                <th>DEPARTURE</th>
-                <th>TYPE</th>
+                <th>DEPARTURE DATE</th>
                 <th>WEIGHT</th>
-                <th>ARRIVAL LOCATION</th>
-                <th>ARRIVAL DATE</th>
+                <th>ASSIGNED CAR</th>
               </tr>
             </thead>
             <tbody>
-              {displayedTrips.map((trip) => (
+              {trips.map(mapTripData).map((trip) => (
                 <tr key={trip.id} className="fade-in">
                   <td className="order-id">{trip.id}</td>
-                  <td>
-                    <StatusBadge status={trip.status} />
-                  </td>
-                  <td>{trip.customer}</td>
-                  <td>{trip.departure}</td>
-                  <td>{trip.type}</td>
+                  <td><StatusBadge status={trip.status} /></td>
+                  <td>{trip.departureDate}</td>
                   <td>{trip.weight}</td>
-                  <td>{trip.arrivalLocation}</td>
-                  <td>
-                    {new Date(trip.arrivalDate).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </td>
+                  <td>{trip.assignedCar}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Utilization Rate Card with Bar Chart
+const UtilizationRateCard = () => {
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const allTripsResponse = await tripsService.getTrips();
+        setTrips(Array.isArray(allTripsResponse?.trips) ? allTripsResponse.trips : []);
+      } catch (err) {
+        setError("Failed to load trips.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
+
+  if (loading) return <div className="grid-item">Loading...</div>;
+  if (error) return <div className="grid-item">{error}</div>;
+
+  const totalTrips = trips.length;
+  const totalOrders = trips.reduce((sum, t) => sum + (t.orders?.length || 0), 0);
+  const utilizationRate = totalTrips > 0 ? (totalOrders / totalTrips) : 0;
+  const chartData = trips.map(t => ({ name: `Trip ${t.id}`, orders: t.orders?.length || 0 }));
+
+  return (
+    <div className="card utilization-rate-card fade-in" style={{ padding: 24, background: '#f8fafc', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 16, minHeight: 280, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+      <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 18, color: '#111827' }}>Utilization Rate</div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: 24, color: '#2563eb' }}>{utilizationRate.toFixed(2)} <span style={{ fontWeight: 400, fontSize: 14, color: '#6b7280' }}>orders/trip</span></div>
+        <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8 }}>Total Orders: {totalOrders} / Total Trips: {totalTrips}</div>
+        <div style={{ width: '100%', height: 120, minHeight: 120 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+              <XAxis dataKey="name" fontSize={12} tick={{ fill: '#6b7280' }} interval={0} angle={-15} height={50} />
+              <YAxis allowDecimals={false} fontSize={12} tick={{ fill: '#6b7280' }} />
+              <Tooltip />
+              <Bar dataKey="orders" fill="#2563eb" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Fulfillment Rate Card with Donut Chart
+const FulfillmentRateCard = () => {
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const allTripsResponse = await tripsService.getTrips();
+        setTrips(Array.isArray(allTripsResponse?.trips) ? allTripsResponse.trips : []);
+      } catch (err) {
+        setError("Failed to load trips.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
+
+  if (loading) return <div className="grid-item">Loading...</div>;
+  if (error) return <div className="grid-item">{error}</div>;
+
+  const totalTrips = trips.length;
+  const completedTrips = trips.filter(t => (t.status || '').toLowerCase() === 'completed').length;
+  const fulfillmentRate = totalTrips > 0 ? (completedTrips / totalTrips) * 100 : 0;
+
+  return (
+    <div className="card fulfillment-rate-card fade-in" style={{ padding: 36, background: '#f8fafc', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 260 }}>
+      <div style={{ marginBottom: 24, fontWeight: 600, fontSize: 22, color: '#111827' }}>Fulfillment Rate</div>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 }}>
+        <CircularProgress variant="determinate" value={fulfillmentRate} size={150} thickness={8} style={{ color: '#059669', background: '#e5e7eb', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', top: '50%', left: 0, width: 150, textAlign: 'center', fontWeight: 700, fontSize: 28, color: '#059669', lineHeight: 1, transform: 'translateY(-50%)' }}>{fulfillmentRate.toFixed(1)}%</div>
+      </div>
+      <div style={{ color: '#9ca3af', fontSize: 14 }}>({completedTrips}/{totalTrips}) trips completed</div>
     </div>
   );
 };
@@ -515,13 +574,14 @@ export default function Dashboard() {
         <div className="left-column">
           <div className="top-section">
             <AvailableCargo />
+            <UtilizationRateCard />
+            <FulfillmentRateCard />
             <LoadingTrucks />
           </div>
-          <div className="bottom-section">
+          <div className="bottom-section" style={{ marginTop: '100px' }}>
             <TripsHistory />
           </div>
         </div>
-
         {/* Right Column - Today's Trips */}
         <div className="right-column">
           <TodaysTrips />

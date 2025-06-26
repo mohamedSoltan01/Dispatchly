@@ -22,6 +22,7 @@ import Products from "./pages/Products";
 import Cars from "./pages/Cars";
 import Account from "./pages/Account";
 import Notifications from "./pages/notifications";
+import OrdersHistory from "./pages/OrdersHistory";
 import {
   useState,
   useEffect,
@@ -64,17 +65,20 @@ function ProtectedRoute({ children }) {
   const { user } = useContext(AuthContext);
   const location = useLocation();
 
+  // Debug log
+  console.log('ProtectedRoute user:', user, 'location:', location.pathname);
+
   if (!user) {
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  // Special case for account page - all authenticated users should have access
-  if (location.pathname === "/account") {
+  // Special case for account and notifications pages - all authenticated users should have access
+  if (location.pathname === "/account" || location.pathname === "/notifications") {
     return children;
   }
 
   // Check if user has access to the current route
-  if (!hasAccess(user.role.toLowerCase(), location.pathname)) {
+  if (!hasAccess(user.role?.toLowerCase?.(), location.pathname)) {
     // Redirect to first accessible route if user doesn't have access
     return <Navigate to={getFirstAccessibleRoute(user)} replace />;
   }
@@ -98,6 +102,7 @@ const getFirstAccessibleRoute = (user) => {
     "/users",
     "/organizations",
     "/cars",
+    "/notifications",
   ];
 
   // Find the first route the user has access to
@@ -119,6 +124,9 @@ function AppContent() {
   const isSelectionMode = location.search.includes("mode=select");
   const isNewOrderPath = location.pathname.includes("/new-order");
   const cleanupInProgress = useRef(false);
+
+  // Debug log
+  console.log('AppContent user:', user, 'location:', location.pathname);
 
   // Initialize selected products from localStorage only when needed
   useEffect(() => {
@@ -372,6 +380,15 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <Notifications />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/orders-history"
+            element={
+              <ProtectedRoute>
+                <OrdersHistory />
               </ProtectedRoute>
             }
           />

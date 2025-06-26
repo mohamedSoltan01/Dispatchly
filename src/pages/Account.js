@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   Avatar,
   Button,
@@ -17,21 +17,39 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import "../styles/Account.css";
 import { AuthContext } from "../App";
+import { organizationsService } from "../services/organizations";
 
 export default function Account() {
   const { user } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
+  const [organization, setOrganization] = useState(null);
+  const [organizationName, setOrganizationName] = useState("");
   const [formData, setFormData] = useState({
     firstName: user?.name?.split(" ")[0] || "",
-    lastName: user?.name?.split(" ").slice(1).join(" ") || "",
     email: user?.email || "",
-    jobTitle: user?.jobTitle || "",
     role: user?.role || "",
-    phone: "", // Not in user data
-    organization: "", // Not in user data
-    department: "", // Not in user data
-    location: "", // Not in user data
+    organization: "", // Will be fetched
   });
+
+  useEffect(() => {
+    // Always fetch organization by id from backend
+    if (user?.organization_id) {
+      const fetchOrg = async () => {
+        try {
+          const org = await organizationsService.getOrganization(user.organization_id);
+          setOrganization(org?.organization || org);
+          setOrganizationName(org?.organization?.name || org?.name || "");
+        } catch (e) {
+          setOrganization(null);
+          setOrganizationName("");
+        }
+      };
+      fetchOrg();
+    } else {
+      setOrganization(null);
+      setOrganizationName("");
+    }
+  }, [user]);
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -41,14 +59,9 @@ export default function Account() {
     // Reset form data to original user data
     setFormData({
       firstName: user?.name?.split(" ")[0] || "",
-      lastName: user?.name?.split(" ").slice(1).join(" ") || "",
       email: user?.email || "",
-      jobTitle: user?.jobTitle || "",
       role: user?.role || "",
-      phone: "",
       organization: "",
-      department: "",
-      location: "",
     });
     setIsEditing(false);
   };
@@ -185,17 +198,6 @@ export default function Account() {
                 className="profile-field"
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Last Name"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-              />
-            </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -203,29 +205,6 @@ export default function Account() {
                 name="email"
                 type="email"
                 value={formData.email}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Phone Number"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-                placeholder="Not provided"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Job Title"
-                name="jobTitle"
-                value={formData.jobTitle}
                 onChange={handleInputChange}
                 disabled={!isEditing}
                 className="profile-field"
@@ -249,33 +228,8 @@ export default function Account() {
                 fullWidth
                 label="Organization"
                 name="organization"
-                value={formData.organization}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-                placeholder="Not provided"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Department"
-                name="department"
-                value={formData.department}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="profile-field"
-                placeholder="Not provided"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                disabled={!isEditing}
+                value={organizationName}
+                disabled={true}
                 className="profile-field"
                 placeholder="Not provided"
               />

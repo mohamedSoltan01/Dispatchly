@@ -5,57 +5,7 @@ import { AuthContext } from "../App";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { IconButton } from "@mui/material";
-
-const mockUsers = [
-  {
-    id: "USR001",
-    name: "Sarah Johnson",
-    jobTitle: "System Administrator",
-    username: "sarah.johnson",
-    password: "Admin@123", // In a real application, this would be hashed
-    role: "admin",
-    email: "sarah.johnson@dispatchly.com",
-    lastLogin: "2024-03-20 14:30",
-    createdAt: "2024-01-15 09:00",
-    status: "active",
-  },
-  {
-    id: "USR002",
-    name: "Michael Chen",
-    jobTitle: "Organization Manager",
-    username: "michael.chen",
-    password: "Org@123", // In a real application, this would be hashed
-    role: "organization",
-    email: "michael.chen@dispatchly.com",
-    lastLogin: "2024-03-20 15:45",
-    createdAt: "2024-02-01 10:30",
-    status: "active",
-  },
-  {
-    id: "USR003",
-    name: "Emily Rodriguez",
-    jobTitle: "Route Planning Specialist",
-    username: "emily.rodriguez",
-    password: "Plan@123", // In a real application, this would be hashed
-    role: "planning",
-    email: "emily.rodriguez@dispatchly.com",
-    lastLogin: "2024-03-20 16:20",
-    createdAt: "2024-02-15 11:45",
-    status: "active",
-  },
-  {
-    id: "USR004",
-    name: "David Kim",
-    jobTitle: "Dispatch Coordinator",
-    username: "david.kim",
-    password: "Dispatch@123", // In a real application, this would be hashed
-    role: "dispatching",
-    email: "david.kim@dispatchly.com",
-    lastLogin: "2024-03-20 13:15",
-    createdAt: "2024-03-01 08:30",
-    status: "active",
-  },
-];
+import { authService } from "../services/auth";
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -67,6 +17,7 @@ export default function SignIn() {
   });
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -74,26 +25,45 @@ export default function SignIn() {
       ...prev,
       [name]: value,
     }));
-    setError(""); // Clear error when user types
+    setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const user = mockUsers.find(
-      (u) =>
-        u.username === formData.username && u.password === formData.password
-    );
+    setIsLoading(true);
+    setError("");
 
-    if (user) {
-      // Remove password from user object before storing
-      const { password, ...userWithoutPassword } = user;
-      login(userWithoutPassword);
+    try {
+      const response = await authService.login(formData);
+      
+      // Store the token
+      authService.setToken(response.token);
+      
+      // Get user data from the response
+      const user = {
+        id: response.user_id,
+        email: formData.username, // Use the email as username
+        organization_id: response.organization_id,
+        role: response.role, // Add the user's role from backend
+        name: formData.username, // fallback for components expecting name
+        jobTitle: "", // fallback for components expecting jobTitle
+        // Add any other user data you need
+      };
+      
+      // Store user data
+      authService.setUser(user);
+      
+      // Update auth context
+      login(user);
 
       // Redirect to the page they tried to visit or dashboard
       const from = location.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
-    } else {
-      setError("Invalid username or password");
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.response?.data?.error || "Invalid username or password");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -170,8 +140,8 @@ export default function SignIn() {
               </div>
             </div>
 
-            <button type="submit" className="signin-button">
-              Sign In
+            <button type="submit" className="signin-button" disabled={isLoading}>
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
         </div>

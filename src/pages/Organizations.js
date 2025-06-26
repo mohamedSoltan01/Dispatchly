@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -23,6 +23,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import "../styles/Organizations.css";
 import { addNotification } from "../utils/notifications";
+import { organizationsService } from "../services/organizations";
 
 // Mock data for organizations
 const mockOrganizations = [
@@ -75,9 +76,9 @@ const getStoredOrganizations = () => {
 };
 
 export default function Organizations() {
-  const [organizations, setOrganizations] = useState(() =>
-    getStoredOrganizations()
-  );
+  const [organizations, setOrganizations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
@@ -92,6 +93,22 @@ export default function Organizations() {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [showDetailsCard, setShowDetailsCard] = useState(false);
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await organizationsService.getOrganizations();
+        setOrganizations(Array.isArray(response.organizations) ? response.organizations : []);
+      } catch (err) {
+        setError("Failed to load organizations.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrganizations();
+  }, []);
 
   // Handle search
   const handleSearch = useCallback((event) => {
@@ -115,77 +132,118 @@ export default function Organizations() {
     setShowNewOrgForm(true);
   }, []);
 
-  // Handle organization added
+  // Add Organization
   const handleOrgAdded = useCallback(
-    (newOrg) => {
+    async (newOrg) => {
       try {
-        const orgToAdd = {
-          id: `ORG${String(organizations.length + 1).padStart(3, "0")}`,
-          name: newOrg.name,
-          creatorEmail: newOrg.adminEmail,
-          serviceRenewalDate: new Date(
-            new Date().setFullYear(new Date().getFullYear() + 1)
-          )
-            .toISOString()
-            .split("T")[0],
-          status: "Active",
-          users: 0,
-          createdAt: new Date().toLocaleString(),
-          lastActive: "Never",
+        setLoading(true);
+        setError(null);
+        // Map form fields to backend expected fields
+        const orgData = {
+          organization: {
+            name: newOrg.name,
+            contact_email: newOrg.adminEmail,
+            contact_phone: newOrg.phone,
+            status: "Active",
+            admin_email: newOrg.adminEmail,
+            password: newOrg.password,
+          },
         };
-
-        const updatedOrgs = [...organizations, orgToAdd];
-        setOrganizations(updatedOrgs);
-        localStorage.setItem("organizations", JSON.stringify(updatedOrgs));
-
-        // Add notification for new organization
-        addNotification("new_organization", {
-          orgName: newOrg.name,
-          adminEmail: newOrg.adminEmail,
-        });
-
+        await organizationsService.createOrganization(orgData);
+        // Refetch organizations
+        const response = await organizationsService.getOrganizations();
+        setOrganizations(Array.isArray(response.organizations) ? response.organizations : []);
         setShowNewOrgForm(false);
+        addNotification("Organization created successfully", "success");
       } catch (error) {
-        console.error("Error adding new organization:", error);
+        setError("Failed to add organization.");
+      } finally {
+        setLoading(false);
       }
     },
-    [organizations]
+    []
   );
 
-  // Handle delete organization
-  const handleDeleteOrg = useCallback(() => {
-    if (selectedOrg) {
-      const updatedOrgs = organizations.filter(
-        (org) => org.id !== selectedOrg.id
-      );
-      setOrganizations(updatedOrgs);
-      localStorage.setItem("organizations", JSON.stringify(updatedOrgs));
-      handleMenuClose();
-    }
-  }, [selectedOrg, organizations, handleMenuClose]);
-
-  // Handle edit organization
-  const handleEditOrg = useCallback(() => {
+  // Edit Organization
+  const handleEditOrg = useCallback(async () => {
     if (selectedOrg) {
       setFormData({
         name: selectedOrg.name,
-        adminEmail: selectedOrg.creatorEmail,
-        password: "", // Password should not be pre-filled for security reasons
-        phone: "", // Assuming phone is not stored, adjust if needed
-        ceo: "", // Assuming CEO is not stored, adjust if needed
+        adminEmail: selectedOrg.contact_email || selectedOrg.creatorEmail,
+        phone: selectedOrg.contact_phone || "",
+        ceo: selectedOrg.ceo || "",
+        password: "",
       });
       setShowNewOrgForm(true);
     }
   }, [selectedOrg]);
 
-  // Handle view details
-  const handleViewDetails = useCallback(() => {
+  // Save edited organization
+  const handleSaveEditOrg = useCallback(
+    async (updatedOrg) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const orgData = {
+          organization: {
+            name: updatedOrg.name,
+            contact_email: updatedOrg.adminEmail,
+            contact_phone: updatedOrg.phone,
+            // Add other fields as needed
+          },
+        };
+        await organizationsService.updateOrganization(selectedOrg.id, orgData);
+        // Refetch organizations
+        const response = await organizationsService.getOrganizations();
+        setOrganizations(Array.isArray(response.organizations) ? response.organizations : []);
+        setShowNewOrgForm(false);
+        addNotification("Organization updated successfully", "success");
+      } catch (error) {
+        setError("Failed to update organization.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedOrg]
+  );
+
+  // Delete Organization
+  const handleDeleteOrg = useCallback(async () => {
     if (selectedOrg) {
-      setShowDetailsCard(true);
+      try {
+        setLoading(true);
+        setError(null);
+        await organizationsService.deleteOrganization(selectedOrg.id);
+        // Refetch organizations
+        const response = await organizationsService.getOrganizations();
+        setOrganizations(Array.isArray(response.organizations) ? response.organizations : []);
+        handleMenuClose();
+        addNotification("Organization deleted successfully", "success");
+      } catch (error) {
+        setError("Failed to delete organization.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [selectedOrg, handleMenuClose]);
+
+  // View Organization Info
+  const handleViewDetails = useCallback(async () => {
+    if (selectedOrg) {
+      try {
+        setLoading(true);
+        setError(null);
+        const org = await organizationsService.getOrganization(selectedOrg.id);
+        setSelectedOrg(org);
+        setShowDetailsCard(true);
+      } catch (error) {
+        setError("Failed to load organization info.");
+      } finally {
+        setLoading(false);
+      }
     }
   }, [selectedOrg]);
 
-  // Handle back button
   const handleBack = useCallback(() => {
     setShowDetailsCard(false);
     handleMenuClose();
@@ -197,6 +255,9 @@ export default function Organizations() {
       org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       org.creatorEmail.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) return <div className="organizations-container">Loading...</div>;
+  if (error) return <div className="organizations-container error-message">{error}</div>;
 
   if (showNewOrgForm) {
     return (
@@ -236,8 +297,6 @@ export default function Organizations() {
               Back
             </button>
 
-            {/* Breadcrumb */}
-
             {/* Page Title */}
             <h1 className="page-title">ORG info</h1>
 
@@ -248,39 +307,27 @@ export default function Organizations() {
 
             {/* Form Fields */}
             <div className="form-fields">
-              {/* Contractor Name */}
+              {/* Organization Name */}
               <div className="form-group">
-                <label className="form-label">contractor name</label>
-                <input value="Jack Adams" className="form-input" readOnly />
+                <label className="form-label">Organization Name</label>
+                <input value={selectedOrg.name || ""} className="form-input" readOnly />
               </div>
 
-              {/* Contacts */}
+              {/* Contact Phone */}
               <div className="form-group">
-                <label className="form-label">Contacts</label>
-                <div className="contacts-container">
-                  <input
-                    value="01122334456"
-                    className="form-input contact-input"
-                    readOnly
-                  />
-                  <input
-                    value="01214545658"
-                    className="form-input contact-input"
-                    readOnly
-                  />
-                  <input
-                    value="01001055446"
-                    className="form-input contact-input"
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              {/* Org CEO */}
-              <div className="form-group">
-                <label className="form-label">Org CEO</label>
+                <label className="form-label">Contact Phone</label>
                 <input
-                  value="Seif El-Din El-Sabbagh"
+                  value={selectedOrg.contact_phone || ""}
+                  className="form-input contact-input"
+                  readOnly
+                />
+              </div>
+
+              {/* Status */}
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <input
+                  value={selectedOrg.status || ""}
                   className="form-input"
                   readOnly
                 />
@@ -290,7 +337,7 @@ export default function Organizations() {
               <div className="form-group">
                 <label className="form-label">Admin Email</label>
                 <input
-                  value={selectedOrg.creatorEmail}
+                  value={selectedOrg.contact_email || ""}
                   className="form-input email-input"
                   readOnly
                 />
@@ -345,7 +392,6 @@ export default function Organizations() {
             <TableRow>
               <TableCell>Organization ID</TableCell>
               <TableCell>Organization Name</TableCell>
-              <TableCell>Service Renewal Date</TableCell>
               <TableCell>Creator Email</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -359,17 +405,7 @@ export default function Organizations() {
                     <Typography variant="body1">{org.name}</Typography>
                   </Box>
                 </TableCell>
-                <TableCell>
-                  {new Date(org.serviceRenewalDate).toLocaleDateString(
-                    "en-US",
-                    {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    }
-                  )}
-                </TableCell>
-                <TableCell>{org.creatorEmail}</TableCell>
+                <TableCell>{org.contact_email || org.creatorEmail}</TableCell>
                 <TableCell align="right">
                   <IconButton
                     size="small"

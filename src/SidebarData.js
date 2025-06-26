@@ -10,10 +10,11 @@ import FmdGoodOutlinedIcon from "@mui/icons-material/FmdGoodOutlined";
 // import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import GarageOutlinedIcon from "@mui/icons-material/GarageOutlined";
+import NotificationsIcon from "@mui/icons-material/Notifications";
 
 // Define role-based access control
 const roleAccess = {
-  admin: [
+  super_admin: [
     "dashboard",
     "trip-history",
     "new-order",
@@ -24,8 +25,9 @@ const roleAccess = {
     "locations",
     "products",
     "cars",
+    "notifications",
   ],
-  organization: [
+  org_admin: [
     "dashboard",
     "trip-history",
     "new-order",
@@ -35,8 +37,9 @@ const roleAccess = {
     "locations",
     "products",
     "cars",
+    "notifications",
   ],
-  planning: [
+  planner: [
     "dashboard",
     "trip-history",
     "new-order",
@@ -45,14 +48,16 @@ const roleAccess = {
     "locations",
     "products",
     "cars",
+    "notifications",
   ],
-  dispatching: [
+  dispatcher: [
     "dashboard",
     "trip-history",
     "dispatch-order",
     "todays-trips",
     "locations",
     "cars",
+    "notifications",
   ],
 };
 
@@ -61,61 +66,67 @@ export const SidebarData = [
     title: "Dashboard",
     icon: <DashboardIcon />,
     path: "/dashboard",
-    roles: ["admin", "organization"],
+    roles: ["super_admin", "org_admin", "planner", "dispatcher"],
   },
   {
     title: "Trip's History",
     icon: <FormatListBulletedIcon />,
     path: "/trip-history",
-    roles: ["admin", "organization", "planning"],
+    roles: ["super_admin", "org_admin", "planner", "dispatcher"],
+  },
+  {
+    title: "Orders History",
+    icon: <FormatListBulletedIcon />,
+    path: "/orders-history",
+    roles: ["super_admin", "org_admin", "planner", "dispatcher"],
   },
   {
     title: "New Order",
     icon: <LocalShippingIcon />,
     path: "/new-order",
-    roles: ["admin", "organization", "planning"],
+    roles: ["super_admin", "org_admin", "planner"],
   },
   {
     title: "Dispatch Order",
     icon: <DriveFileMoveIcon />,
     path: "/dispatch-order",
-    roles: ["admin", "organization", "dispatching"],
+    roles: ["super_admin", "org_admin", "dispatcher"],
   },
   {
     title: "Today's Trips",
     icon: <ExploreOutlinedIcon />,
     path: "/todays-trips",
-    roles: ["admin", "organization"],
+    roles: ["super_admin", "org_admin", "planner", "dispatcher"],
   },
   {
     title: "Users",
     icon: <AccountCircleOutlinedIcon />,
     path: "/users",
-    roles: ["admin", "organization"],
+    roles: ["super_admin", "org_admin"],
   },
   {
     title: "Organizations",
     icon: <WarehouseOutlinedIcon />,
     path: "/organizations",
-    roles: ["admin"],
+    roles: ["super_admin"],
   },
   {
     title: "Locations",
     icon: <FmdGoodOutlinedIcon />,
     path: "/locations",
-    roles: ["admin", "organization", "planning"],
+    roles: ["super_admin", "org_admin", "planner", "dispatcher"],
   },
   {
     title: "Products",
     icon: <Inventory2OutlinedIcon />,
     path: "/products",
-    roles: ["admin", "organization", "planning"],
+    roles: ["super_admin", "org_admin", "planner"],
   },
   {
     title: "Cars",
     icon: <GarageOutlinedIcon />,
     path: "/cars",
-    roles: ["admin", "organization", "dispatching"],
+    roles: ["super_admin", "org_admin", "dispatcher"],
   },
 ];
 

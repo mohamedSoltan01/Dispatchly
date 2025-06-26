@@ -8,6 +8,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { IconButton, Badge, Menu, MenuItem, Avatar } from "@mui/material";
 import { useNotificationCount } from "../hooks/useNotificationCount";
 import { AuthContext } from "../App";
+import { authService } from "../services/auth";
 
 export default function Navbar({ toggleSidebar }) {
   const navigate = useNavigate();
@@ -28,8 +29,8 @@ export default function Navbar({ toggleSidebar }) {
     navigate("/account");
   };
 
-  const handleSignOut = () => {
-    handleMenuClose();
+  const handleLogout = () => {
+    authService.logout();
     logout();
     navigate("/signin");
   };
@@ -117,7 +118,7 @@ export default function Navbar({ toggleSidebar }) {
         >
           <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
           <MenuItem
-            onClick={handleSignOut}
+            onClick={handleLogout}
             sx={{
               color: colors.error,
               borderTop: `1px solid ${colors.border.light}`,
